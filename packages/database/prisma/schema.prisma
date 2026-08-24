@@ -21,7 +21,7 @@ enum ProjectRole {
 }
 
 model Profile {
-  id          String   @id
+  id          String   @id @db.Uuid
   displayName String?
   avatarUrl   String?
   timezone    String   @default("UTC")
