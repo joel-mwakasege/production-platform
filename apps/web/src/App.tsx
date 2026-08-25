@@ -137,9 +137,13 @@ function App() {
         },
         body: JSON.stringify({ name: organizationName }),
       })
-      const result = await readApiResponse<Organization & { error?: string }>(response)
+      const result = await readApiResponse<Organization & { error?: string; demoProject?: Project }>(response)
       if (!response.ok) throw new Error(result.error ?? 'Could not create your workspace.')
       setOrganization(result)
+      if (result.demoProject) {
+        setProjects([result.demoProject])
+        setProject(result.demoProject)
+      }
     } catch (error) {
       setOrganizationMessage(error instanceof Error ? error.message : 'Could not create your workspace.')
     } finally {
