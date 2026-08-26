@@ -1,6 +1,16 @@
-import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import 'dotenv/config';
+import { PrismaClient } from '../generated/client/index.js';
 
-dotenv.config({ path: new URL("../.env", import.meta.url) });
+// Prevent multiple instances of Prisma Client in development/serverless reloads
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-export const database = new PrismaClient();
+export const database = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = database;
+}
+
+export * from '../generated/client/index.js';
+export { PrismaClient };
