@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { extractBearerToken } from '../lib/auth.js';
+import { extractBearerToken } from '../lib/auth';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
