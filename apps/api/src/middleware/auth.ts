@@ -10,7 +10,7 @@ const supabase = supabaseUrl && serviceRoleKey
       auth: { persistSession: false, autoRefreshToken: false },
     })
   : null;
-
+  
 export type AuthenticatedRequest = Request & {
   user?: {
     id: string;
