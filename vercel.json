@@ -1,7 +1,7 @@
 {
-  "buildCommand": "pnpm --filter @production-platform/database db:generate && pnpm --filter ./apps/web build",
+  "installCommand": "pnpm install && pnpm --filter @production-platform/database db:generate",
+  "buildCommand": "pnpm --filter ./apps/web build",
   "outputDirectory": "apps/web/dist",
-  "installCommand": "pnpm install",
   "rewrites": [
     { 
       "source": "/api/(.*)", 
