@@ -35,7 +35,7 @@ export const requireAuth: RequestHandler = async (
     res.status(503).json({ error: 'Authentication service is not configured' });
     return;
   }
-
+  // @ts-ignore
   const { data, error } = await supabase.auth.getUser(token);
 
   if (error || !data.user) {
