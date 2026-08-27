@@ -6,9 +6,6 @@ import { PreviewDashboard } from './components/PreviewDashboard'
 import { WorkspaceDashboard } from './components/WorkspaceDashboard'
 import './App.css'
 
-const sections = ['Overview', 'Write', 'Breakdown', 'Visualize', 'Plan', 'Shoot']
-const phases = ['Idea', 'Script', 'Breakdown', 'Schedule', 'Production']
-
 type Organization = { id: string; name: string; slug: string }
 type Project = {
   id: string
@@ -20,6 +17,21 @@ type Project = {
   status?: string
   startDate?: string | null
   endDate?: string | null
+}
+
+const DEFAULT_ORG: Organization = {
+  id: 'default-org',
+  name: 'Northstar Films',
+  slug: 'northstar-films',
+}
+
+const DEFAULT_PROJECT: Project = {
+  id: 'default-project',
+  name: 'The Last Light',
+  slug: 'the-last-light',
+  description: 'A young woman follows a photograph through one last day of secrets and light.',
+  projectType: 'FILM',
+  status: 'ACTIVE',
 }
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -35,22 +47,9 @@ async function readApiResponse<T>(response: Response): Promise<T> {
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null)
-  const [organization, setOrganization] = useState<Organization | null>(null)
-  const [project, setProject] = useState<Project | null>(null)
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loadingWorkspace, setLoadingWorkspace] = useState(Boolean(supabase))
-  const [organizationName, setOrganizationName] = useState('')
-  const [organizationMessage, setOrganizationMessage] = useState('')
-  const [creatingOrganization, setCreatingOrganization] = useState(false)
-  const [projectName, setProjectName] = useState('')
-  const [projectDescription, setProjectDescription] = useState('')
-  const [projectType, setProjectType] = useState('FILM')
-  const [projectStatus, setProjectStatus] = useState('PLANNING')
-  const [projectClient, setProjectClient] = useState('')
-  const [projectStartDate, setProjectStartDate] = useState('')
-  const [projectEndDate, setProjectEndDate] = useState('')
-  const [projectMessage, setProjectMessage] = useState('')
-  const [creatingProject, setCreatingProject] = useState(false)
+  const [organization, setOrganization] = useState<Organization>(DEFAULT_ORG)
+  const [project, setProject] = useState<Project>(DEFAULT_PROJECT)
+  const [projects, setProjects] = useState<Project[]>([DEFAULT_PROJECT])
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -58,51 +57,38 @@ export function App() {
   const [confirmationEmail, setConfirmationEmail] = useState('')
   const [resendingConfirmation, setResendingConfirmation] = useState(false)
 
+  // Listen to Supabase Auth state
   useEffect(() => {
     if (!supabase) return
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (!data.session) setLoadingWorkspace(false)
     })
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next)
-      if (!next) {
-        setOrganization(null)
-        setProject(null)
-        setProjects([])
-        setLoadingWorkspace(false)
-      }
     })
     return () => data.subscription.unsubscribe()
   }, [])
 
+  // Background fetch real organizations & projects if available
   useEffect(() => {
-    if (!supabase || !session) {
-      setLoadingWorkspace(false)
-      return
-    }
+    if (!supabase || !session) return
     let cancelled = false
     const accessToken = session.access_token
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 7000)
 
-    async function restoreWorkspace() {
+    async function fetchWorkspaceData() {
       try {
         const response = await fetch(`${API_URL}/api/organizations`, {
           headers: { Authorization: `Bearer ${accessToken}` },
-          signal: controller.signal,
         })
-        if (!response.ok) {
-          return
-        }
+        if (!response.ok) return
         const result = await readApiResponse<{ organizations: Organization[] }>(response)
         if (cancelled || !result.organizations?.length) return
 
-        const nextOrganization = result.organizations[0]
-        setOrganization(nextOrganization)
-        const projectsResponse = await fetch(`${API_URL}/api/organizations/${nextOrganization.id}/projects`, {
+        const nextOrg = result.organizations[0]
+        setOrganization(nextOrg)
+
+        const projectsResponse = await fetch(`${API_URL}/api/organizations/${nextOrg.id}/projects`, {
           headers: { Authorization: `Bearer ${accessToken}` },
-          signal: controller.signal,
         })
         if (!cancelled && projectsResponse.ok) {
           const projectsResult = await readApiResponse<{ projects: Project[] }>(projectsResponse)
@@ -112,17 +98,13 @@ export function App() {
           }
         }
       } catch (err) {
-        console.warn('Workspace restore fallback:', err)
-      } finally {
-        clearTimeout(timeoutId)
-        setLoadingWorkspace(false)
+        console.warn('Background workspace sync:', err)
       }
     }
 
-    void restoreWorkspace()
+    void fetchWorkspaceData()
     return () => {
       cancelled = true
-      clearTimeout(timeoutId)
     }
   }, [session])
 
@@ -149,93 +131,13 @@ export function App() {
 
   async function signOut() {
     await supabase?.auth.signOut()
+    setOrganization(DEFAULT_ORG)
+    setProject(DEFAULT_PROJECT)
+    setProjects([DEFAULT_PROJECT])
   }
 
-  async function createOrganization(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!session) return
-
-    setCreatingOrganization(true)
-    setOrganizationMessage('')
-    try {
-      const response = await fetch(`${API_URL}/api/organizations`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: organizationName }),
-      })
-      const result = await readApiResponse<Organization & { error?: string; demoProject?: Project }>(response)
-      if (!response.ok) throw new Error(result.error ?? 'Could not create your workspace.')
-      setOrganization(result)
-      if (result.demoProject) {
-        setProjects([result.demoProject])
-        setProject(result.demoProject)
-      }
-    } catch (error) {
-      setOrganizationMessage(error instanceof Error ? error.message : 'Could not create your workspace.')
-    } finally {
-      setCreatingOrganization(false)
-    }
-  }
-
-  async function createProject(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!session || !organization) return
-
-    setCreatingProject(true)
-    setProjectMessage('')
-    try {
-      const response = await fetch(`${API_URL}/api/organizations/${organization.id}/projects`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: projectName,
-          description: projectDescription || undefined,
-          projectType,
-          status: projectStatus,
-          client: projectClient || undefined,
-          startDate: projectStartDate || undefined,
-          endDate: projectEndDate || undefined,
-        }),
-      })
-      const result = await readApiResponse<{ id: string; name: string; slug: string; description?: string | null; error?: string }>(response)
-      if (!response.ok) throw new Error(result.error ?? 'Could not create your project.')
-      setProjects((currentProjects) => [result, ...currentProjects])
-      setProject(result)
-    } catch (error) {
-      setProjectMessage(error instanceof Error ? error.message : 'Could not create your project.')
-    } finally {
-      setCreatingProject(false)
-    }
-  }
-
-  if (supabase && loadingWorkspace) {
-    return (
-      <main className="auth-page">
-        <div className="brand">FRAME <span>/ WORK</span></div>
-        <section className="auth-panel">
-          <p className="eyebrow">Production workspace</p>
-          <h1>Loading your workspace.</h1>
-          <p className="lede">Connecting to your production data...</p>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-            <button className="secondary" type="button" onClick={() => setLoadingWorkspace(false)}>
-              Continue to Workspace
-            </button>
-            <button className="text-button" type="button" onClick={signOut} style={{ marginTop: 0 }}>
-              Sign out
-            </button>
-          </div>
-        </section>
-      </main>
-    )
-  }
-
-  if (!session && supabase) {
+  // 1. Unauthenticated Login / Sign up view
+  if (!session) {
     return (
       <main className="auth-page">
         <div className="brand">FRAME <span>/ WORK</span></div>
@@ -277,210 +179,16 @@ export function App() {
     )
   }
 
-  if (supabase && session && !organization) {
-    return (
-      <main className="auth-page">
-        <div className="brand">FRAME <span>/ WORK</span></div>
-        <section className="auth-panel">
-          <p className="eyebrow">One last thing</p>
-          <h1>Name your workspace.</h1>
-          <p className="lede">This is where your projects, people, and production plans will live.</p>
-          <form onSubmit={createOrganization}>
-            <label>
-              Workspace name
-              <input
-                required
-                minLength={2}
-                maxLength={120}
-                value={organizationName}
-                onChange={(e) => setOrganizationName(e.target.value)}
-                placeholder="Northstar Films"
-              />
-            </label>
-            <button className="primary" disabled={creatingOrganization} type="submit">
-              {creatingOrganization ? 'Creating...' : 'Create workspace'} <span>-&gt;</span>
-            </button>
-          </form>
-          {organizationMessage && <p className="message">{organizationMessage}</p>}
-        </section>
-      </main>
-    )
-  }
-
-  if (supabase && session && organization && !project) {
-    return (
-      <main className="auth-page">
-        <div className="brand">FRAME <span>/ WORK</span></div>
-        <section className="auth-panel">
-          <p className="eyebrow">Workspace ready</p>
-          <h1>Start your first project.</h1>
-          <p className="lede">Create a project inside {organization.name} and bring the production into focus.</p>
-          <form onSubmit={createProject}>
-            <label>
-              Project name
-              <input
-                required
-                minLength={2}
-                maxLength={120}
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="The Last Light"
-              />
-            </label>
-            <label>
-              Project type
-              <select value={projectType} onChange={(e) => setProjectType(e.target.value)}>
-                <option value="FILM">Film</option>
-                <option value="TELEVISION">Television</option>
-                <option value="COMMERCIAL">Commercial</option>
-                <option value="DOCUMENTARY">Documentary</option>
-                <option value="MUSIC_VIDEO">Music video</option>
-                <option value="CORPORATE_VIDEO">Corporate video</option>
-                <option value="EVENT">Event</option>
-                <option value="PHOTOSHOOT">Photoshoot</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </label>
-            <label>
-              Status
-              <select value={projectStatus} onChange={(e) => setProjectStatus(e.target.value)}>
-                <option value="PLANNING">Planning</option>
-                <option value="ACTIVE">Active</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="ARCHIVED">Archived</option>
-              </select>
-            </label>
-            <label>
-              Client <span className="optional">Optional</span>
-              <input maxLength={160} value={projectClient} onChange={(e) => setProjectClient(e.target.value)} placeholder="Client or commissioning partner" />
-            </label>
-            <div className="date-fields">
-              <label>
-                Start date <span className="optional">Optional</span>
-                <input type="date" value={projectStartDate} onChange={(e) => setProjectStartDate(e.target.value)} />
-              </label>
-              <label>
-                End date <span className="optional">Optional</span>
-                <input type="date" value={projectEndDate} onChange={(e) => setProjectEndDate(e.target.value)} />
-              </label>
-            </div>
-            <label>
-              Description <span className="optional">Optional</span>
-              <textarea
-                maxLength={2000}
-                value={projectDescription}
-                onChange={(e) => setProjectDescription(e.target.value)}
-                placeholder="A short description of the production."
-              />
-            </label>
-            <button className="primary" disabled={creatingProject} type="submit">
-              {creatingProject ? 'Creating...' : 'Create project'} <span>-&gt;</span>
-            </button>
-          </form>
-          {projectMessage && <p className="message">{projectMessage}</p>}
-        </section>
-      </main>
-    )
-  }
-
-  if (supabase && session && organization && project) {
-    return (
-      <WorkspaceDashboard
-        organization={organization}
-        project={project}
-        projects={projects}
-        onProjectChange={setProject}
-        session={session}
-        onSignOut={signOut}
-      />
-    )
-  }
-
+  // 2. Direct entry into the live workspace dashboard!
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">FRAME <span>/ WORK</span></div>
-        <div className="workspace">
-          <b>N</b><span><strong>Northstar Films</strong><small>Personal workspace</small></span>
-        </div>
-        <p className="nav-label">Workspace</p>
-        <nav>
-          {sections.map((section, index) => (
-            <button className={index === 0 ? 'nav selected' : 'nav'} key={section} type="button">
-              <i>{['+', 'W', 'B', 'V', 'P', 'S'][index]}</i>{section}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <button className="nav" type="button"><i>?</i>Help & resources</button>
-          <button className="profile" type="button">
-            <b>JM</b><span><strong>Joel Mwakasege</strong><small>Account settings</small></span>
-          </button>
-        </div>
-      </aside>
-      <section className="content">
-        <header className="topbar">
-          <strong>PROJECTS / THE LAST LIGHT</strong>
-          <span>● All changes saved <button>Share</button></span>
-        </header>
-        <div className="page">
-          <div className="heading">
-            <div>
-              <p className="eyebrow">Tuesday, August 25, 2026</p>
-              <h1>The Last Light</h1>
-              <p className="lede">A short film by Northstar Films</p>
-            </div>
-            <button className="primary" type="button">+ New item</button>
-          </div>
-          <div className="phases">
-            {phases.map((phase, index) => (
-              <div className={index < 2 ? 'done' : index === 2 ? 'active' : ''} key={phase}>
-                <span>{index + 1}</span>{phase}
-              </div>
-            ))}
-          </div>
-          <div className="grid">
-            <section className="panel tasks">
-              <p className="eyebrow">Today</p>
-              <h2>Next on the desk</h2>
-              {['Review scene 08 breakdown', 'Confirm location hold', "Upload director's notes"].map((task, index) => (
-                <div className={index === 2 ? 'task complete' : 'task'} key={task}>
-                  <span className="check">{index === 2 ? 'x' : ''}</span>
-                  <span><strong>{task}</strong><small>{index === 0 ? 'Breakdown / due today' : index === 1 ? 'Planning / due today' : 'Write / completed'}</small></span>
-                  <time>{index < 2 ? `${index ? '14' : '10'}:30` : ''}</time>
-                </div>
-              ))}
-            </section>
-            <section className="panel pulse">
-              <p className="eyebrow">Production pulse</p>
-              <h2>Moving with purpose.</h2>
-              <div className="number">42<span>%</span></div>
-              <div className="bar"><span /></div>
-              <p>18 of 43 production items complete</p>
-              <div className="stats">
-                <b>6 <small>shoot days</small></b>
-                <b>24 <small>contacts</small></b>
-              </div>
-            </section>
-            <section className="panel activity">
-              <p className="eyebrow">Latest</p>
-              <h2>Activity</h2>
-              <p><b>Ruth Mwangi</b> updated the <strong>scene 08 breakdown</strong><small>12 minutes ago</small></p>
-              <p><b>Alex Kim</b> joined the project<small>Yesterday at 16:42</small></p>
-            </section>
-            <section className="panel project">
-              <p className="eyebrow">Project details</p>
-              <h2>Built for the whole day.</h2>
-              <p>Your production data stays connected from first thought to final call.</p>
-              <div className="meta">
-                <span>Type<strong>Short film</strong></span>
-                <span>Prep starts<strong>Sep 14, 2026</strong></span>
-              </div>
-            </section>
-          </div>
-        </div>
-      </section>
-    </main>
+    <WorkspaceDashboard
+      organization={organization}
+      project={project}
+      projects={projects}
+      onProjectChange={setProject}
+      session={session}
+      onSignOut={signOut}
+    />
   )
 }
 
