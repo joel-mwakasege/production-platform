@@ -1,0 +1,27 @@
+{
+  "antigravity.max_context_tokens": 65536,
+  "antigravity.agent_auto_run_limit": 5,
+  "antigravity.include_git_history": false,
+  "antigravity.file_watching.exclude": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/generated/**",
+    "*.log",
+    "**/.turbo/**",
+    "**/.pnpm-store/**"
+  ],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "packages/database/generated": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "packages/database/generated": true,
+    "**/.turbo": true
+  }
+}
