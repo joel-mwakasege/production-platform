@@ -1,10 +1,21 @@
 import cors from 'cors';
-import express from 'express';
+import express, { Router } from 'express';
 import { requireAuth } from './middleware/auth.js';
 import { createOrganizationHandler, listOrganizationsHandler } from './routes/organizations.js';
-import { createProjectHandler, createTaskHandler, getProjectHandler, listProjectsHandler, listTasksHandler, updateTaskHandler } from './routes/projects.js';
+import {
+  createProjectHandler,
+  createTaskHandler,
+  getProjectHandler,
+  listProjectsHandler,
+  listTasksHandler,
+  updateTaskHandler,
+} from './routes/projects.js';
 import { getScreenplayHandler, saveScreenplayHandler } from './routes/screenplays.js';
-import { addBreakdownElementHandler, getBreakdownHandler, removeBreakdownElementHandler } from './routes/breakdowns.js';
+import {
+  addBreakdownElementHandler,
+  getBreakdownHandler,
+  removeBreakdownElementHandler,
+} from './routes/breakdowns.js';
 import { assignSceneHandler, createShootDayHandler, getScheduleHandler } from './routes/schedules.js';
 import {
   createContactHandler,
@@ -24,45 +35,76 @@ import {
 
 const app = express();
 
-app.use(cors());
+const corsOptions: cors.CorsOptions = {
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
-app.get('/', (_req, res) => {
-  res.json({ service: 'production-platform-api', status: 'ok' });
-});
-
+// Base health endpoints
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'production-platform-api' });
 });
 
-app.post('/api/organizations', requireAuth, createOrganizationHandler);
-app.get('/api/organizations', requireAuth, listOrganizationsHandler);
-app.get('/api/organizations/:organizationId/projects', requireAuth, listProjectsHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId', requireAuth, getProjectHandler);
-app.post('/api/organizations/:organizationId/projects', requireAuth, createProjectHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/tasks', requireAuth, listTasksHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/tasks', requireAuth, createTaskHandler);
-app.patch('/api/organizations/:organizationId/projects/:projectId/tasks/:taskId', requireAuth, updateTaskHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/screenplay', requireAuth, getScreenplayHandler);
-app.put('/api/organizations/:organizationId/projects/:projectId/screenplay', requireAuth, saveScreenplayHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/breakdown', requireAuth, getBreakdownHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/breakdown/elements', requireAuth, addBreakdownElementHandler);
-app.delete('/api/organizations/:organizationId/projects/:projectId/breakdown/scenes/:sceneId/elements/:elementId', requireAuth, removeBreakdownElementHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/schedule', requireAuth, getScheduleHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/schedule/days', requireAuth, createShootDayHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/schedule/days/:shootDayId/scenes', requireAuth, assignSceneHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/contacts', requireAuth, listContactsHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/contacts', requireAuth, createContactHandler);
-app.patch('/api/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, updateContactHandler);
-app.delete('/api/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, deleteContactHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, listLocationsHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, createLocationHandler);
-app.patch('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, updateLocationHandler);
-app.delete('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, deleteLocationHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/callsheets', requireAuth, listCallSheetsHandler);
-app.get('/api/organizations/:organizationId/projects/:projectId/callsheets/days/:shootDayId', requireAuth, getCallSheetByDayHandler);
-app.post('/api/organizations/:organizationId/projects/:projectId/callsheets', requireAuth, saveCallSheetHandler);
-app.patch('/api/organizations/:organizationId/projects/:projectId/callsheets/:shootDayId', requireAuth, saveCallSheetHandler);
+const router = Router();
+
+// Organizations
+router.post('/organizations', requireAuth, createOrganizationHandler);
+router.get('/organizations', requireAuth, listOrganizationsHandler);
+
+// Projects & Tasks
+router.get('/organizations/:organizationId/projects', requireAuth, listProjectsHandler);
+router.get('/organizations/:organizationId/projects/:projectId', requireAuth, getProjectHandler);
+router.post('/organizations/:organizationId/projects', requireAuth, createProjectHandler);
+router.get('/organizations/:organizationId/projects/:projectId/tasks', requireAuth, listTasksHandler);
+router.post('/organizations/:organizationId/projects/:projectId/tasks', requireAuth, createTaskHandler);
+router.patch('/organizations/:organizationId/projects/:projectId/tasks/:taskId', requireAuth, updateTaskHandler);
+
+// Screenplays
+router.get('/organizations/:organizationId/projects/:projectId/screenplay', requireAuth, getScreenplayHandler);
+router.put('/organizations/:organizationId/projects/:projectId/screenplay', requireAuth, saveScreenplayHandler);
+
+// Breakdown
+router.get('/organizations/:organizationId/projects/:projectId/breakdown', requireAuth, getBreakdownHandler);
+router.post('/organizations/:organizationId/projects/:projectId/breakdown/elements', requireAuth, addBreakdownElementHandler);
+router.delete('/organizations/:organizationId/projects/:projectId/breakdown/scenes/:sceneId/elements/:elementId', requireAuth, removeBreakdownElementHandler);
+
+// Schedules
+router.get('/organizations/:organizationId/projects/:projectId/schedule', requireAuth, getScheduleHandler);
+router.post('/organizations/:organizationId/projects/:projectId/schedule/days', requireAuth, createShootDayHandler);
+router.post('/organizations/:organizationId/projects/:projectId/schedule/days/:shootDayId/scenes', requireAuth, assignSceneHandler);
+
+// Contacts
+router.get('/organizations/:organizationId/projects/:projectId/contacts', requireAuth, listContactsHandler);
+router.post('/organizations/:organizationId/projects/:projectId/contacts', requireAuth, createContactHandler);
+router.patch('/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, updateContactHandler);
+router.delete('/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, deleteContactHandler);
+
+// Locations
+router.get('/organizations/:organizationId/projects/:projectId/locations', requireAuth, listLocationsHandler);
+router.post('/organizations/:organizationId/projects/:projectId/locations', requireAuth, createLocationHandler);
+router.patch('/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, updateLocationHandler);
+router.delete('/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, deleteLocationHandler);
+
+// Call Sheets
+router.get('/organizations/:organizationId/projects/:projectId/callsheets', requireAuth, listCallSheetsHandler);
+router.get('/organizations/:organizationId/projects/:projectId/callsheets/days/:shootDayId', requireAuth, getCallSheetByDayHandler);
+router.post('/organizations/:organizationId/projects/:projectId/callsheets', requireAuth, saveCallSheetHandler);
+router.patch('/organizations/:organizationId/projects/:projectId/callsheets/:shootDayId', requireAuth, saveCallSheetHandler);
+
+// Mount router on both '/api' and '/' for robust Vercel serverless routing
+app.use('/api', router);
+app.use('/', router);
+
+// Root fallback
+app.get('/', (_req, res) => {
+  res.json({ service: 'production-platform-api', status: 'ok' });
+});
 
 // 404 handler
 app.use((_req, res) => {
