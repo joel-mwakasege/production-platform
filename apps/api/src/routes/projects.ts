@@ -138,11 +138,49 @@ export const getProjectHandler: RequestHandler = async (req, res): Promise<void>
   }
 };
 
+import { createDemoProject } from './organizations';
+
 export async function authorizeProjectRequest(req: Request) {
   const profileId = await resolveProfileId(req);
   const organizationId = getOrganizationId(req);
   const projectId = typeof req.params.projectId === 'string' ? req.params.projectId : null;
   if (!profileId || !organizationId || !projectId) return null;
+
+  if (organizationId === 'default-org' || projectId === 'default-project') {
+    const existingMembership = await database.organizationMember.findFirst({
+      where: { profileId },
+      include: { organization: { include: { projects: true } } },
+    });
+
+    if (existingMembership && existingMembership.organization.projects.length > 0) {
+      return {
+        organizationId: existingMembership.organizationId,
+        projectId: existingMembership.organization.projects[0].id,
+      };
+    }
+
+    // Auto-provision initial workspace and demo project for this user
+    let orgSlug = 'northstar-films';
+    let suffix = 2;
+    while (await database.organization.findUnique({ where: { slug: orgSlug } })) {
+      orgSlug = `northstar-films-${suffix}`;
+      suffix += 1;
+    }
+
+    const { organization, demoProject } = await database.$transaction(async (transaction) => {
+      const createdOrg = await transaction.organization.create({
+        data: {
+          name: 'Northstar Films',
+          slug: orgSlug,
+          members: { create: { profileId, role: 'OWNER' } },
+        },
+      });
+      const createdProj = await createDemoProject(transaction, createdOrg.id, profileId);
+      return { organization: createdOrg, demoProject: createdProj };
+    });
+
+    return { organizationId: organization.id, projectId: demoProject.id };
+  }
 
   const membership = await getOrganizationMember(organizationId, profileId);
   if (!membership) return null;

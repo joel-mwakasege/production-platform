@@ -28,7 +28,7 @@ const demoElements = [
   { name: 'Unmarked envelope', category: 'PROP' as const, scenes: [2] },
 ];
 
-async function createDemoProject(transaction: Parameters<Parameters<typeof database.$transaction>[0]>[0], organizationId: string, profileId: string) {
+export async function createDemoProject(transaction: Parameters<Parameters<typeof database.$transaction>[0]>[0], organizationId: string, profileId: string) {
   const project = await transaction.project.create({
     data: {
       organizationId,
