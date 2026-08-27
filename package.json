@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.15.0",
   "scripts": {
-    "postinstall": "pnpm --filter @production-platform/database db:generate",
+    "postinstall": "pnpm --filter @production-platform/database db:generate && pnpm --filter @production-platform/database build",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
