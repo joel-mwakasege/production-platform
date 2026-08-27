@@ -9,7 +9,7 @@
     ".": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc src/index.ts --outDir dist --declaration",
+    "build": "tsc src/index.ts --outDir dist --declaration --target ES2022 --module NodeNext --moduleResolution NodeNext",
     "db:generate": "prisma generate",
     "db:format": "prisma format",
     "db:validate": "prisma validate",
