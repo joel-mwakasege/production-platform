@@ -227,10 +227,11 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
     if (!matchesSearch) return false;
 
     if (activeTab === 'ALL') return true;
-    if (activeTab === 'CAST') return contact.category === 'CAST';
-    if (activeTab === 'CREW') return contact.category === 'CREW';
-    if (activeTab === 'PRODUCTION') return contact.category === 'PRODUCTION';
-    if (activeTab === 'VENDORS') return contact.category === 'VENDOR' || contact.category === 'CLIENT';
+    const cat = contact.category?.toUpperCase();
+    if (activeTab === 'CAST') return cat === 'CAST';
+    if (activeTab === 'CREW') return cat === 'CREW';
+    if (activeTab === 'PRODUCTION') return cat === 'PRODUCTION';
+    if (activeTab === 'VENDORS') return cat === 'VENDOR' || cat === 'CLIENT';
     return true;
   });
 
@@ -243,10 +244,10 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
     );
   });
 
-  const castCount = contacts.filter((c) => c.category === 'CAST').length;
-  const crewCount = contacts.filter((c) => c.category === 'CREW').length;
-  const vendorCount = contacts.filter((c) => c.category === 'VENDOR' || c.category === 'CLIENT').length;
-  const productionCount = contacts.filter((c) => c.category === 'PRODUCTION').length;
+  const castCount = contacts.filter((c) => c.category?.toUpperCase() === 'CAST').length;
+  const crewCount = contacts.filter((c) => c.category?.toUpperCase() === 'CREW').length;
+  const vendorCount = contacts.filter((c) => c.category?.toUpperCase() === 'VENDOR' || c.category?.toUpperCase() === 'CLIENT').length;
+  const productionCount = contacts.filter((c) => c.category?.toUpperCase() === 'PRODUCTION').length;
 
   return (
     <main className="script-shell">
@@ -313,54 +314,63 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
         {message && <p className="interaction-notice">{message}</p>}
 
         {/* Locations Grid */}
-        {(activeTab === 'ALL' || activeTab === 'LOCATIONS') && filteredLocations.length > 0 && (
+        {(activeTab === 'ALL' || activeTab === 'LOCATIONS') && (
           <div className="section-block">
             <div className="section-title">
               <p className="eyebrow">Locations</p>
               <h2>Shooting Locations ({filteredLocations.length})</h2>
             </div>
-            <div className="location-grid">
-              {filteredLocations.map((loc) => (
-                <article className="location-card" key={loc.id}>
-                  <div className="location-card-header">
-                    <div>
-                      <span className="badge location-badge">Location</span>
-                      <h3>{loc.name}</h3>
+            {filteredLocations.length > 0 ? (
+              <div className="location-grid">
+                {filteredLocations.map((loc) => (
+                  <article className="location-card" key={loc.id}>
+                    <div className="location-card-header">
+                      <div>
+                        <span className="badge location-badge">Location</span>
+                        <h3>{loc.name}</h3>
+                      </div>
+                      <button
+                        className="delete-icon-btn"
+                        type="button"
+                        onClick={() => void handleDeleteLocation(loc.id)}
+                        title="Delete Location"
+                      >
+                        ✕
+                      </button>
                     </div>
-                    <button
-                      className="delete-icon-btn"
-                      type="button"
-                      onClick={() => void handleDeleteLocation(loc.id)}
-                      title="Delete Location"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {loc.address && <p className="card-address">📍 {loc.address}</p>}
-                  {loc.description && <p className="card-desc">{loc.description}</p>}
-                  <div className="card-meta">
-                    {loc.nearestHospital && (
-                      <div className="meta-item hospital">
-                        <strong>Hospital</strong>
-                        <span>{loc.nearestHospital}</span>
-                      </div>
-                    )}
-                    {loc.parking && (
-                      <div className="meta-item">
-                        <strong>Parking</strong>
-                        <span>{loc.parking}</span>
-                      </div>
-                    )}
-                    {loc.basecamp && (
-                      <div className="meta-item">
-                        <strong>Basecamp</strong>
-                        <span>{loc.basecamp}</span>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+                    {loc.address && <p className="card-address">📍 {loc.address}</p>}
+                    {loc.description && <p className="card-desc">{loc.description}</p>}
+                    <div className="card-meta">
+                      {loc.nearestHospital && (
+                        <div className="meta-item hospital">
+                          <strong>Hospital</strong>
+                          <span>{loc.nearestHospital}</span>
+                        </div>
+                      )}
+                      {loc.parking && (
+                        <div className="meta-item">
+                          <strong>Parking</strong>
+                          <span>{loc.parking}</span>
+                        </div>
+                      )}
+                      {loc.basecamp && (
+                        <div className="meta-item">
+                          <strong>Basecamp</strong>
+                          <span>{loc.basecamp}</span>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              activeTab === 'LOCATIONS' && (
+                <div className="empty-state" style={{ padding: '32px 0' }}>
+                  <strong>No locations found.</strong>
+                  <small>Click "+ Location" to add your first shooting location.</small>
+                </div>
+              )
+            )}
           </div>
         )}
 
@@ -372,68 +382,67 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
               <h2>Cast & Crew Directory ({filteredContacts.length})</h2>
             </div>
 
-            <div className="contacts-grid">
-              {filteredContacts.map((c) => {
-                const initials = c.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase();
+            {filteredContacts.length > 0 ? (
+              <div className="contacts-grid">
+                {filteredContacts.map((c) => {
+                  const initials = c.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
 
-                return (
-                  <article className="contact-card" key={c.id}>
-                    <div className="contact-card-header">
-                      <div className="contact-avatar">{initials}</div>
-                      <div className="contact-info">
-                        <div className="name-row">
-                          <h3>{c.name}</h3>
-                          <span className={`badge category-${c.category.toLowerCase()}`}>
-                            {c.category.replaceAll('_', ' ')}
-                          </span>
+                  return (
+                    <article className="contact-card" key={c.id}>
+                      <div className="contact-card-header">
+                        <div className="contact-avatar">{initials}</div>
+                        <div className="contact-info">
+                          <div className="name-row">
+                            <h3>{c.name}</h3>
+                            <span className={`badge category-${c.category?.toLowerCase()}`}>
+                              {c.category?.replaceAll('_', ' ')}
+                            </span>
+                          </div>
+                          <p className="role-dept">
+                            {c.role && <strong>{c.role}</strong>}
+                            {c.role && c.department && <span> · </span>}
+                            {c.department && <span>{c.department}</span>}
+                            {c.company && <span> ({c.company})</span>}
+                          </p>
                         </div>
-                        <p className="role-dept">
-                          {c.role && <strong>{c.role}</strong>}
-                          {c.role && c.department && <span> · </span>}
-                          {c.department && <span>{c.department}</span>}
-                          {c.company && <span> ({c.company})</span>}
-                        </p>
+                        <button
+                          className="delete-icon-btn"
+                          type="button"
+                          onClick={() => void handleDeleteContact(c.id)}
+                          title="Delete Contact"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <button
-                        className="delete-icon-btn"
-                        type="button"
-                        onClick={() => void handleDeleteContact(c.id)}
-                        title="Delete Contact"
-                      >
-                        ✕
-                      </button>
-                    </div>
 
-                    <div className="contact-contact-info">
-                      {c.email && (
-                        <a href={`mailto:${c.email}`} className="info-link">
-                          ✉ {c.email}
-                        </a>
-                      )}
-                      {c.phone && (
-                        <a href={`tel:${c.phone}`} className="info-link">
-                          ☎ {c.phone}
-                        </a>
-                      )}
-                      {c.notes && <p className="contact-notes">{c.notes}</p>}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {filteredContacts.length === 0 && filteredLocations.length === 0 && (
-          <div className="empty-state" style={{ marginTop: '48px' }}>
-            <strong>No contacts or locations found.</strong>
-            <small>Click "+ Contact" or "+ Location" above to start building your production team directory.</small>
+                      <div className="contact-contact-info">
+                        {c.email && (
+                          <a href={`mailto:${c.email}`} className="info-link">
+                            ✉ {c.email}
+                          </a>
+                        )}
+                        {c.phone && (
+                          <a href={`tel:${c.phone}`} className="info-link">
+                            ☎ {c.phone}
+                          </a>
+                        )}
+                        {c.notes && <p className="contact-notes">{c.notes}</p>}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-state" style={{ padding: '32px 0' }}>
+                <strong>No contacts found in this view.</strong>
+                <small>Click "+ Contact" to add cast and crew members to this production.</small>
+              </div>
+            )}
           </div>
         )}
       </div>
