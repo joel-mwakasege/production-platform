@@ -51,7 +51,15 @@ async function resolveProfileId(req: Request): Promise<string | null> {
   const user = (req as unknown as AuthenticatedRequest).user;
   if (!user) return null;
 
-  const profile = await database.profile.findUnique({ where: { id: user.id } });
+  let profile = await database.profile.findUnique({ where: { id: user.id } });
+  if (!profile) {
+    profile = await database.profile.create({
+      data: {
+        id: user.id,
+        displayName: user.email?.split('@')[0] ?? 'User',
+      },
+    });
+  }
   return profile?.id ?? null;
 }
 
@@ -61,63 +69,73 @@ function getOrganizationId(req: Request): string | null {
 }
 
 export const listProjectsHandler: RequestHandler = async (req, res): Promise<void> => {
-  const profileId = await resolveProfileId(req);
-  if (!profileId) {
-    res.status(401).json({ error: 'Unauthorized request' });
-    return;
+  try {
+    const profileId = await resolveProfileId(req);
+    if (!profileId) {
+      res.status(401).json({ error: 'Unauthorized request' });
+      return;
+    }
+
+    const organizationId = getOrganizationId(req);
+    if (!organizationId) {
+      res.status(400).json({ error: 'Invalid organization ID' });
+      return;
+    }
+
+    const membership = await getOrganizationMember(organizationId, profileId);
+    if (!membership) {
+      res.status(403).json({ error: 'Organization membership required' });
+      return;
+    }
+
+    const projects = await database.project.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      select: projectSelect,
+    });
+
+    res.json({ projects });
+  } catch (err: any) {
+    console.error('Error in listProjectsHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to list projects' });
   }
-
-  const organizationId = getOrganizationId(req);
-  if (!organizationId) {
-    res.status(400).json({ error: 'Invalid organization ID' });
-    return;
-  }
-
-  const membership = await getOrganizationMember(organizationId, profileId);
-  if (!membership) {
-    res.status(403).json({ error: 'Organization membership required' });
-    return;
-  }
-
-  const projects = await database.project.findMany({
-    where: { organizationId },
-    orderBy: { createdAt: 'desc' },
-    select: projectSelect,
-  });
-
-  res.json({ projects });
 };
 
 export const getProjectHandler: RequestHandler = async (req, res): Promise<void> => {
-  const profileId = await resolveProfileId(req);
-  if (!profileId) {
-    res.status(401).json({ error: 'Unauthorized request' });
-    return;
-  }
+  try {
+    const profileId = await resolveProfileId(req);
+    if (!profileId) {
+      res.status(401).json({ error: 'Unauthorized request' });
+      return;
+    }
 
-  const organizationId = getOrganizationId(req);
-  const projectId = typeof req.params.projectId === 'string' ? req.params.projectId : null;
-  if (!organizationId || !projectId) {
-    res.status(400).json({ error: 'Invalid project request' });
-    return;
-  }
+    const organizationId = getOrganizationId(req);
+    const projectId = typeof req.params.projectId === 'string' ? req.params.projectId : null;
+    if (!organizationId || !projectId) {
+      res.status(400).json({ error: 'Invalid project request' });
+      return;
+    }
 
-  const membership = await getOrganizationMember(organizationId, profileId);
-  if (!membership) {
-    res.status(403).json({ error: 'Organization membership required' });
-    return;
-  }
+    const membership = await getOrganizationMember(organizationId, profileId);
+    if (!membership) {
+      res.status(403).json({ error: 'Organization membership required' });
+      return;
+    }
 
-  const project = await database.project.findFirst({
-    where: { id: projectId, organizationId },
-    select: projectSelect,
-  });
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
+    const project = await database.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: projectSelect,
+    });
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
 
-  res.json({ project });
+    res.json({ project });
+  } catch (err: any) {
+    console.error('Error in getProjectHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to get project' });
+  }
 };
 
 export async function authorizeProjectRequest(req: Request) {
@@ -134,115 +152,135 @@ export async function authorizeProjectRequest(req: Request) {
 }
 
 export const listTasksHandler: RequestHandler = async (req, res): Promise<void> => {
-  const context = await authorizeProjectRequest(req);
-  if (!context) {
-    res.status(403).json({ error: 'Project membership required' });
-    return;
-  }
+  try {
+    const context = await authorizeProjectRequest(req);
+    if (!context) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
 
-  const tasks = await database.task.findMany({
-    where: { projectId: context.projectId },
-    orderBy: [{ completed: 'asc' }, { createdAt: 'desc' }],
-  });
-  res.json({ tasks });
+    const tasks = await database.task.findMany({
+      where: { projectId: context.projectId },
+      orderBy: [{ completed: 'asc' }, { createdAt: 'desc' }],
+    });
+    res.json({ tasks });
+  } catch (err: any) {
+    console.error('Error in listTasksHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to list tasks' });
+  }
 };
 
 export const createTaskHandler: RequestHandler = async (req, res): Promise<void> => {
-  const context = await authorizeProjectRequest(req);
-  if (!context) {
-    res.status(403).json({ error: 'Project membership required' });
-    return;
-  }
+  try {
+    const context = await authorizeProjectRequest(req);
+    if (!context) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
 
-  const parsed = taskSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid task payload' });
-    return;
-  }
+    const parsed = taskSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid task payload' });
+      return;
+    }
 
-  const task = await database.task.create({
-    data: { projectId: context.projectId, title: parsed.data.title, dueDate: parsed.data.dueDate || null },
-  });
-  res.status(201).json({ task });
+    const task = await database.task.create({
+      data: { projectId: context.projectId, title: parsed.data.title, dueDate: parsed.data.dueDate || null },
+    });
+    res.status(201).json({ task });
+  } catch (err: any) {
+    console.error('Error in createTaskHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to create task' });
+  }
 };
 
 export const updateTaskHandler: RequestHandler = async (req, res): Promise<void> => {
-  const context = await authorizeProjectRequest(req);
-  const taskId = typeof req.params.taskId === 'string' ? req.params.taskId : null;
-  if (!context || !taskId) {
-    res.status(403).json({ error: 'Project membership required' });
-    return;
-  }
+  try {
+    const context = await authorizeProjectRequest(req);
+    const taskId = typeof req.params.taskId === 'string' ? req.params.taskId : null;
+    if (!context || !taskId) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
 
-  const parsed = updateTaskSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid task payload' });
-    return;
-  }
+    const parsed = updateTaskSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid task payload' });
+      return;
+    }
 
-  const existingTask = await database.task.findFirst({ where: { id: taskId, projectId: context.projectId }, select: { id: true } });
-  if (!existingTask) {
-    res.status(404).json({ error: 'Task not found' });
-    return;
-  }
+    const existingTask = await database.task.findFirst({ where: { id: taskId, projectId: context.projectId }, select: { id: true } });
+    if (!existingTask) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
 
-  const task = await database.task.update({ where: { id: taskId }, data: parsed.data });
-  res.json({ task });
+    const task = await database.task.update({ where: { id: taskId }, data: parsed.data });
+    res.json({ task });
+  } catch (err: any) {
+    console.error('Error in updateTaskHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to update task' });
+  }
 };
 
 export const createProjectHandler: RequestHandler = async (req, res): Promise<void> => {
-  const profileId = await resolveProfileId(req);
-  if (!profileId) {
-    res.status(401).json({ error: 'Unauthorized request' });
-    return;
+  try {
+    const profileId = await resolveProfileId(req);
+    if (!profileId) {
+      res.status(401).json({ error: 'Unauthorized request' });
+      return;
+    }
+
+    const organizationId = getOrganizationId(req);
+    if (!organizationId) {
+      res.status(400).json({ error: 'Invalid organization ID' });
+      return;
+    }
+
+    const membership = await getOrganizationMember(organizationId, profileId);
+    if (!membership) {
+      res.status(403).json({ error: 'Organization membership required' });
+      return;
+    }
+
+    const parsed = projectSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid project payload' });
+      return;
+    }
+
+    const slug = slugify(parsed.data.name);
+    if (!slug) {
+      res.status(400).json({ error: 'Project name must contain a letter or number' });
+      return;
+    }
+
+    let projectSlug = slug;
+    let suffix = 2;
+    while (await database.project.findUnique({ where: { organizationId_slug: { organizationId, slug: projectSlug } } })) {
+      projectSlug = `${slug}-${suffix}`;
+      suffix += 1;
+    }
+
+    const project = await database.project.create({
+      data: {
+        organizationId,
+        name: parsed.data.name,
+        slug: projectSlug,
+        description: parsed.data.description || null,
+        projectType: parsed.data.projectType,
+        client: parsed.data.client || null,
+        status: parsed.data.status,
+        startDate: parsed.data.startDate || null,
+        endDate: parsed.data.endDate || null,
+        members: { create: { profileId, role: 'OWNER' } },
+      },
+      select: projectSelect,
+    });
+
+    res.status(201).json({ ...project, role: 'OWNER' });
+  } catch (err: any) {
+    console.error('Error in createProjectHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to create project' });
   }
-
-  const organizationId = getOrganizationId(req);
-  if (!organizationId) {
-    res.status(400).json({ error: 'Invalid organization ID' });
-    return;
-  }
-
-  const membership = await getOrganizationMember(organizationId, profileId);
-  if (!membership) {
-    res.status(403).json({ error: 'Organization membership required' });
-    return;
-  }
-
-  const parsed = projectSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid project payload' });
-    return;
-  }
-
-  const slug = slugify(parsed.data.name);
-  if (!slug) {
-    res.status(400).json({ error: 'Project name must contain a letter or number' });
-    return;
-  }
-
-  let projectSlug = slug;
-  let suffix = 2;
-  while (await database.project.findUnique({ where: { organizationId_slug: { organizationId, slug: projectSlug } } })) {
-    projectSlug = `${slug}-${suffix}`;
-    suffix += 1;
-  }
-
-  const project = await database.project.create({
-    data: {
-      organizationId,
-      name: parsed.data.name,
-      slug: projectSlug,
-      description: parsed.data.description || null,
-      projectType: parsed.data.projectType,
-      client: parsed.data.client || null,
-      status: parsed.data.status,
-      startDate: parsed.data.startDate || null,
-      endDate: parsed.data.endDate || null,
-      members: { create: { profileId, role: 'OWNER' } },
-    },
-    select: projectSelect,
-  });
-
-  res.status(201).json({ ...project, role: 'OWNER' });
 };

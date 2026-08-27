@@ -80,78 +80,92 @@ export const createOrganizationHandler: RequestHandler = async (
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
-  const parsed = createOrganizationSchema.safeParse(req.body);
+  try {
+    const parsed = createOrganizationSchema.safeParse(req.body);
 
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid organization payload' });
-    return;
-  }
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid organization payload' });
+      return;
+    }
 
-  if (!req.user) {
-    res.status(401).json({ error: 'Unauthorized request' });
-    return;
-  }
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized request' });
+      return;
+    }
 
-  const { name } = parsed.data;
-  const slug = slugify(name);
-  if (!slug) {
-    res.status(400).json({ error: 'Organization name must contain a letter or number' });
-    return;
-  }
+    const { name } = parsed.data;
+    const slug = slugify(name);
+    if (!slug) {
+      res.status(400).json({ error: 'Organization name must contain a letter or number' });
+      return;
+    }
 
-  let organizationSlug = slug;
-  let suffix = 2;
-  while (await database.organization.findUnique({ where: { slug: organizationSlug } })) {
-    organizationSlug = `${slug}-${suffix}`;
-    suffix += 1;
-  }
+    let organizationSlug = slug;
+    let suffix = 2;
+    while (await database.organization.findUnique({ where: { slug: organizationSlug } })) {
+      organizationSlug = `${slug}-${suffix}`;
+      suffix += 1;
+    }
 
-  const profile = await database.profile.findFirst({
-    where: { id: req.user.id },
-  });
-
-  if (!profile) {
-    res.status(404).json({ error: 'Profile not found' });
-    return;
-  }
-
-  const { organization, demoProject } = await database.$transaction(async (transaction) => {
-    const createdOrganization = await transaction.organization.create({
-      data: { name, slug: organizationSlug, members: { create: { profileId: profile.id, role: 'OWNER' } } },
-      select: { id: true, name: true, slug: true },
+    let profile = await database.profile.findFirst({
+      where: { id: req.user.id },
     });
-    const createdDemoProject = await createDemoProject(transaction, createdOrganization.id, profile.id);
-    return { organization: createdOrganization, demoProject: createdDemoProject };
-  });
 
-  res.status(201).json({
-    id: organization.id,
-    name: organization.name,
-    slug: organization.slug,
-    role: 'OWNER',
-    demoProject,
-  });
+    if (!profile) {
+      profile = await database.profile.create({
+        data: {
+          id: req.user.id,
+          displayName: req.user.email?.split('@')[0] ?? 'User',
+        },
+      });
+    }
+
+    const { organization, demoProject } = await database.$transaction(async (transaction) => {
+      const createdOrganization = await transaction.organization.create({
+        data: { name, slug: organizationSlug, members: { create: { profileId: profile.id, role: 'OWNER' } } },
+        select: { id: true, name: true, slug: true },
+      });
+      const createdDemoProject = await createDemoProject(transaction, createdOrganization.id, profile.id);
+      return { organization: createdOrganization, demoProject: createdDemoProject };
+    });
+
+    res.status(201).json({
+      id: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+      role: 'OWNER',
+      demoProject,
+    });
+  } catch (err: any) {
+    console.error('Error in createOrganizationHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to create organization' });
+  }
 };
 
 export const listOrganizationsHandler: RequestHandler = async (
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
-  if (!req.user) {
-    res.status(401).json({ error: 'Unauthorized request' });
-    return;
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized request' });
+      return;
+    }
+
+    const memberships = await database.organizationMember.findMany({
+      where: { profileId: req.user.id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        role: true,
+        organization: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    res.json({
+      organizations: memberships.map(({ organization, role }) => ({ ...organization, role })),
+    });
+  } catch (err: any) {
+    console.error('Error in listOrganizationsHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to list organizations' });
   }
-
-  const memberships = await database.organizationMember.findMany({
-    where: { profileId: req.user.id },
-    orderBy: { createdAt: 'asc' },
-    select: {
-      role: true,
-      organization: { select: { id: true, name: true, slug: true } },
-    },
-  });
-
-  res.json({
-    organizations: memberships.map(({ organization, role }) => ({ ...organization, role })),
-  });
 };

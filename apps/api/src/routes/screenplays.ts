@@ -30,100 +30,103 @@ const screenplaySchema = z.object({
 });
 
 export const getScreenplayHandler: RequestHandler = async (req, res): Promise<void> => {
-  const context = await authorizeProjectRequest(req);
-  if (!context) {
-    res.status(403).json({ error: 'Project membership required' });
-    return;
-  }
+  try {
+    const context = await authorizeProjectRequest(req);
+    if (!context) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
 
-  // Fetch the screenplay, scenes, and order the new script elements mathematically
-  const screenplay = await database.screenplay.findUnique({
-    where: { projectId: context.projectId },
-    include: { 
-      scenes: { 
-        orderBy: { sceneNumber: 'asc' },
-        include: { scriptElements: { orderBy: { position: 'asc' } } }
-      } 
-    },
-  });
-  res.json({ screenplay });
-};
-
-export const saveScreenplayHandler: RequestHandler = async (req, res): Promise<void> => {
-  const context = await authorizeProjectRequest(req);
-  if (!context) {
-    res.status(403).json({ error: 'Project membership required' });
-    return;
-  }
-
-  const parsed = screenplaySchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid screenplay payload' });
-    return;
-  }
-
-  const sceneNumbers = parsed.data.scenes.map((scene) => scene.sceneNumber);
-  if (new Set(sceneNumbers).size !== sceneNumbers.length) {
-    res.status(400).json({ error: 'Scene numbers must be unique' });
-    return;
-  }
-
-  const screenplay = await database.$transaction(async (transaction) => {
-    // 1. Ensure the screenplay exists
-    const current = await transaction.screenplay.upsert({
+    const screenplay = await database.screenplay.findUnique({
       where: { projectId: context.projectId },
-      create: { projectId: context.projectId, title: parsed.data.title },
-      update: { title: parsed.data.title },
-    });
-
-    // 2. Wipe the old scenes (the database cascade will safely delete all attached script elements)
-    await transaction.scene.deleteMany({ where: { screenplayId: current.id } });
-
-    // 3. Prepare high-performance bulk inserts
-    const scenesToCreate: any[] = [];
-    const elementsToCreate: any[] = [];
-
-    parsed.data.scenes.forEach((scene) => {
-      const sceneId = randomUUID(); // Generate ID early so we can link elements to it instantly
-      scenesToCreate.push({
-        id: sceneId,
-        screenplayId: current.id,
-        sceneNumber: scene.sceneNumber,
-        heading: scene.heading,
-        body: scene.body,
-      });
-
-      // Loop through every structured block and assign it an exact mathematical position
-      scene.scriptElements.forEach((el, index) => {
-        elementsToCreate.push({
-          id: randomUUID(),
-          sceneId: sceneId,
-          type: el.type,
-          content: el.content,
-          position: index, 
-        });
-      });
-    });
-
-    // 4. Bulk insert to the database
-    if (scenesToCreate.length > 0) {
-      await transaction.scene.createMany({ data: scenesToCreate });
-    }
-    if (elementsToCreate.length > 0) {
-      await transaction.screenplayElement.createMany({ data: elementsToCreate });
-    }
-
-    // 5. Return the fully refreshed, structured script
-    return transaction.screenplay.findUnique({ 
-      where: { id: current.id }, 
       include: { 
         scenes: { 
           orderBy: { sceneNumber: 'asc' },
           include: { scriptElements: { orderBy: { position: 'asc' } } }
         } 
-      } 
+      },
     });
-  });
+    res.json({ screenplay });
+  } catch (err: any) {
+    console.error('Error in getScreenplayHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to get screenplay' });
+  }
+};
 
-  res.json({ screenplay });
+export const saveScreenplayHandler: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const context = await authorizeProjectRequest(req);
+    if (!context) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
+
+    const parsed = screenplaySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid screenplay payload' });
+      return;
+    }
+
+    const sceneNumbers = parsed.data.scenes.map((scene) => scene.sceneNumber);
+    if (new Set(sceneNumbers).size !== sceneNumbers.length) {
+      res.status(400).json({ error: 'Scene numbers must be unique' });
+      return;
+    }
+
+    const screenplay = await database.$transaction(async (transaction) => {
+      const current = await transaction.screenplay.upsert({
+        where: { projectId: context.projectId },
+        create: { projectId: context.projectId, title: parsed.data.title },
+        update: { title: parsed.data.title },
+      });
+
+      await transaction.scene.deleteMany({ where: { screenplayId: current.id } });
+
+      const scenesToCreate: any[] = [];
+      const elementsToCreate: any[] = [];
+
+      parsed.data.scenes.forEach((scene) => {
+        const sceneId = randomUUID();
+        scenesToCreate.push({
+          id: sceneId,
+          screenplayId: current.id,
+          sceneNumber: scene.sceneNumber,
+          heading: scene.heading,
+          body: scene.body,
+        });
+
+        scene.scriptElements.forEach((el, index) => {
+          elementsToCreate.push({
+            id: randomUUID(),
+            sceneId: sceneId,
+            type: el.type,
+            content: el.content,
+            position: index, 
+          });
+        });
+      });
+
+      if (scenesToCreate.length > 0) {
+        await transaction.scene.createMany({ data: scenesToCreate });
+      }
+      if (elementsToCreate.length > 0) {
+        await transaction.screenplayElement.createMany({ data: elementsToCreate });
+      }
+
+      return transaction.screenplay.findUnique({ 
+        where: { id: current.id }, 
+        include: { 
+          scenes: { 
+            orderBy: { sceneNumber: 'asc' },
+            include: { scriptElements: { orderBy: { position: 'asc' } } }
+          } 
+        } 
+      });
+    });
+
+    res.json({ screenplay });
+  } catch (err: any) {
+    console.error('Error in saveScreenplayHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to save screenplay' });
+  }
 };

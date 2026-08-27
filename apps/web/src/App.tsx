@@ -77,38 +77,52 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    if (!supabase || !session) return
+    if (!supabase || !session) {
+      setLoadingWorkspace(false)
+      return
+    }
     let cancelled = false
     const accessToken = session.access_token
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 7000)
 
     async function restoreWorkspace() {
       try {
         const response = await fetch(`${API_URL}/api/organizations`, {
           headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
         })
+        if (!response.ok) {
+          return
+        }
         const result = await readApiResponse<{ organizations: Organization[] }>(response)
-        if (!response.ok || !result.organizations?.length || cancelled) return
+        if (cancelled || !result.organizations?.length) return
 
         const nextOrganization = result.organizations[0]
         setOrganization(nextOrganization)
         const projectsResponse = await fetch(`${API_URL}/api/organizations/${nextOrganization.id}/projects`, {
           headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
         })
-        const projectsResult = await readApiResponse<{ projects: Project[] }>(projectsResponse)
-        if (!cancelled && projectsResponse.ok && projectsResult.projects?.length) {
-          setProjects(projectsResult.projects)
-          setProject(projectsResult.projects[0])
+        if (!cancelled && projectsResponse.ok) {
+          const projectsResult = await readApiResponse<{ projects: Project[] }>(projectsResponse)
+          if (projectsResult.projects?.length) {
+            setProjects(projectsResult.projects)
+            setProject(projectsResult.projects[0])
+          }
         }
-      } catch {
-        // Fall back gracefully when API is loading or empty
+      } catch (err) {
+        console.warn('Workspace restore fallback:', err)
       } finally {
-        if (!cancelled) setLoadingWorkspace(false)
+        clearTimeout(timeoutId)
+        setLoadingWorkspace(false)
       }
     }
 
     void restoreWorkspace()
     return () => {
       cancelled = true
+      clearTimeout(timeoutId)
     }
   }, [session])
 
@@ -207,6 +221,15 @@ export function App() {
         <section className="auth-panel">
           <p className="eyebrow">Production workspace</p>
           <h1>Loading your workspace.</h1>
+          <p className="lede">Connecting to your production data...</p>
+          <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+            <button className="secondary" type="button" onClick={() => setLoadingWorkspace(false)}>
+              Continue to Workspace
+            </button>
+            <button className="text-button" type="button" onClick={signOut} style={{ marginTop: 0 }}>
+              Sign out
+            </button>
+          </div>
         </section>
       </main>
     )

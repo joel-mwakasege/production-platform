@@ -51,4 +51,15 @@ app.get('/api/organizations/:organizationId/projects/:projectId/locations', requ
 app.post('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, createLocationHandler);
 app.delete('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, deleteLocationHandler);
 
+// 404 handler
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Global error handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
 export default app;
