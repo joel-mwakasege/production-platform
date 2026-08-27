@@ -1,11 +1,11 @@
-export type Phase = 'Idea' | 'Script' | 'Breakdown' | 'Schedule' | 'Production'
+export type Phase = 'Idea' | 'Script' | 'Breakdown' | 'Plan' | 'Schedule' | 'Production'
 
 type PhaseRailProps = {
   activePhase: Phase
   onPhaseChange: (phase: Phase) => void
 }
 
-const phases: Phase[] = ['Idea', 'Script', 'Breakdown', 'Schedule', 'Production']
+const phases: Phase[] = ['Idea', 'Script', 'Breakdown', 'Plan', 'Schedule', 'Production']
 
 export function PhaseRail({ activePhase, onPhaseChange }: PhaseRailProps) {
   const activeIndex = phases.indexOf(activePhase)

@@ -265,7 +265,7 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
         </span>
       </header>
 
-      <PhaseRail activePhase="Idea" onPhaseChange={onPhaseChange} />
+      <PhaseRail activePhase="Plan" onPhaseChange={onPhaseChange} />
 
       <div className="contacts-page">
         {/* Action Header & Search */}
