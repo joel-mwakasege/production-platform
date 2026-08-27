@@ -127,9 +127,8 @@ export function WorkspaceDashboard({ organization, project, projects, session, o
       
       if (!response.ok) throw new Error(result.error ?? 'Could not create project.')
       
-      // Update local state and instantly switch to the new project
+      // Update local state (adds it to the dropdown without switching)
       setActiveProjects((current) => [result, ...current])
-      onProjectChange(result)
       
       // Clean up modal
       setShowNewProjectModal(false)
