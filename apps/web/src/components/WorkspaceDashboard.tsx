@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { ScriptWorkspace } from './ScriptWorkspace'
 import { BreakdownWorkspace } from './BreakdownWorkspace'
 import { ScheduleWorkspace } from './ScheduleWorkspace'
+import { ContactsWorkspace } from './ContactsWorkspace'
 import type { Phase } from './PhaseRail'
 import { ProductionWorkspace } from './ProductionWorkspace'
 
@@ -145,6 +146,7 @@ export function WorkspaceDashboard({ organization, project, projects, session, o
   if (selectedPhase === 'Breakdown') return <BreakdownWorkspace organization={organization} project={project} session={session} onPhaseChange={handlePhaseChange} onBack={() => handlePhaseChange('Idea')} />
   if (selectedPhase === 'Schedule') return <ScheduleWorkspace organization={organization} project={project} session={session} onPhaseChange={handlePhaseChange} onBack={() => handlePhaseChange('Idea')} />
   if (selectedPhase === 'Production') return <ProductionWorkspace organization={organization} project={project} session={session} onPhaseChange={handlePhaseChange} onBack={() => handlePhaseChange('Idea')} />
+  if (selectedSection === 'Plan') return <ContactsWorkspace organization={organization} project={project} session={session} onPhaseChange={handlePhaseChange} onBack={() => { setSelectedSection('Overview'); setSelectedPhase('Idea'); }} />
 
   return (
     <>
@@ -192,6 +194,8 @@ export function WorkspaceDashboard({ organization, project, projects, session, o
                   setNotice(`${section} selected`); 
                   if (section === 'Write') setSelectedPhase('Script'); 
                   if (section === 'Breakdown') setSelectedPhase('Breakdown');
+                  if (section === 'Plan') setSelectedSection('Plan');
+                  if (section === 'Shoot') setSelectedPhase('Production');
                 }}
               >
                 <i>{['+', 'W', 'B', 'V', 'P', 'S'][index]}</i>{section}

@@ -1,14 +1,31 @@
+import { randomUUID } from 'crypto';
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import { database } from '@production-platform/database';
 import { authorizeProjectRequest } from './projects.js';
 
+// Define the exact types supported by our new database model
+const ScreenplayElementTypeEnum = z.enum([
+  'SCENE_HEADING',
+  'ACTION',
+  'CHARACTER',
+  'DIALOGUE',
+  'PARENTHETICAL',
+  'TRANSITION',
+  'SHOT'
+]);
+
+// Upgrade the payload validation to accept structured blocks
 const screenplaySchema = z.object({
   title: z.string().trim().min(1).max(160).default('Screenplay'),
   scenes: z.array(z.object({
     sceneNumber: z.number().int().positive(),
     heading: z.string().trim().min(1).max(200),
-    body: z.string().max(10000),
+    body: z.string().max(10000).default(''), // Kept for backwards compatibility during transition
+    scriptElements: z.array(z.object({
+      type: ScreenplayElementTypeEnum,
+      content: z.string().max(10000),
+    })).default([]) // Defaults to empty array so old frontend saves don't crash
   })).max(500),
 });
 
@@ -19,9 +36,15 @@ export const getScreenplayHandler: RequestHandler = async (req, res): Promise<vo
     return;
   }
 
+  // Fetch the screenplay, scenes, and order the new script elements mathematically
   const screenplay = await database.screenplay.findUnique({
     where: { projectId: context.projectId },
-    include: { scenes: { orderBy: { sceneNumber: 'asc' } } },
+    include: { 
+      scenes: { 
+        orderBy: { sceneNumber: 'asc' },
+        include: { scriptElements: { orderBy: { position: 'asc' } } }
+      } 
+    },
   });
   res.json({ screenplay });
 };
@@ -46,16 +69,60 @@ export const saveScreenplayHandler: RequestHandler = async (req, res): Promise<v
   }
 
   const screenplay = await database.$transaction(async (transaction) => {
+    // 1. Ensure the screenplay exists
     const current = await transaction.screenplay.upsert({
       where: { projectId: context.projectId },
       create: { projectId: context.projectId, title: parsed.data.title },
       update: { title: parsed.data.title },
     });
+
+    // 2. Wipe the old scenes (the database cascade will safely delete all attached script elements)
     await transaction.scene.deleteMany({ where: { screenplayId: current.id } });
-    await transaction.scene.createMany({
-      data: parsed.data.scenes.map((scene) => ({ ...scene, screenplayId: current.id })),
+
+    // 3. Prepare high-performance bulk inserts
+    const scenesToCreate: any[] = [];
+    const elementsToCreate: any[] = [];
+
+    parsed.data.scenes.forEach((scene) => {
+      const sceneId = randomUUID(); // Generate ID early so we can link elements to it instantly
+      scenesToCreate.push({
+        id: sceneId,
+        screenplayId: current.id,
+        sceneNumber: scene.sceneNumber,
+        heading: scene.heading,
+        body: scene.body,
+      });
+
+      // Loop through every structured block and assign it an exact mathematical position
+      scene.scriptElements.forEach((el, index) => {
+        elementsToCreate.push({
+          id: randomUUID(),
+          sceneId: sceneId,
+          type: el.type,
+          content: el.content,
+          position: index, 
+        });
+      });
     });
-    return transaction.screenplay.findUnique({ where: { id: current.id }, include: { scenes: { orderBy: { sceneNumber: 'asc' } } } });
+
+    // 4. Bulk insert to the database
+    if (scenesToCreate.length > 0) {
+      await transaction.scene.createMany({ data: scenesToCreate });
+    }
+    if (elementsToCreate.length > 0) {
+      await transaction.screenplayElement.createMany({ data: elementsToCreate });
+    }
+
+    // 5. Return the fully refreshed, structured script
+    return transaction.screenplay.findUnique({ 
+      where: { id: current.id }, 
+      include: { 
+        scenes: { 
+          orderBy: { sceneNumber: 'asc' },
+          include: { scriptElements: { orderBy: { position: 'asc' } } }
+        } 
+      } 
+    });
   });
 
   res.json({ screenplay });

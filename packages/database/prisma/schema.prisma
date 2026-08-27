@@ -114,6 +114,8 @@ model Project {
   screenplay   Screenplay?
   elements     ProductionElement[]
   shootDays    ShootDay[]
+  contacts     Contact[]
+  locations    Location[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -269,4 +271,54 @@ model SceneSchedule {
   @@id([sceneId, shootDayId])
   @@index([shootDayId])
   @@map("scene_schedule")
+}
+
+enum ContactCategory {
+  CAST
+  CREW
+  CLIENT
+  VENDOR
+  LOCATION
+  PRODUCTION
+  OTHER
+}
+
+model Contact {
+  id         String          @id @default(uuid())
+  projectId  String
+  name       String
+  role       String?
+  department String?
+  company    String?
+  email      String?
+  phone      String?
+  address    String?
+  notes      String?
+  category   ContactCategory @default(CREW)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("contacts")
+}
+
+model Location {
+  id              String   @id @default(uuid())
+  projectId       String
+  name            String
+  address         String?
+  description     String?
+  parking         String?
+  basecamp        String?
+  nearestHospital String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("locations")
 }

@@ -6,6 +6,14 @@ import { createProjectHandler, createTaskHandler, getProjectHandler, listProject
 import { getScreenplayHandler, saveScreenplayHandler } from './routes/screenplays.js';
 import { addBreakdownElementHandler, getBreakdownHandler, removeBreakdownElementHandler } from './routes/breakdowns.js';
 import { assignSceneHandler, createShootDayHandler, getScheduleHandler } from './routes/schedules.js';
+import {
+  createContactHandler,
+  createLocationHandler,
+  deleteContactHandler,
+  deleteLocationHandler,
+  listContactsHandler,
+  listLocationsHandler,
+} from './routes/contacts.js';
 
 const app = express();
 
@@ -36,5 +44,11 @@ app.delete('/api/organizations/:organizationId/projects/:projectId/breakdown/sce
 app.get('/api/organizations/:organizationId/projects/:projectId/schedule', requireAuth, getScheduleHandler);
 app.post('/api/organizations/:organizationId/projects/:projectId/schedule/days', requireAuth, createShootDayHandler);
 app.post('/api/organizations/:organizationId/projects/:projectId/schedule/days/:shootDayId/scenes', requireAuth, assignSceneHandler);
+app.get('/api/organizations/:organizationId/projects/:projectId/contacts', requireAuth, listContactsHandler);
+app.post('/api/organizations/:organizationId/projects/:projectId/contacts', requireAuth, createContactHandler);
+app.delete('/api/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, deleteContactHandler);
+app.get('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, listLocationsHandler);
+app.post('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, createLocationHandler);
+app.delete('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, deleteLocationHandler);
 
 export default app;
