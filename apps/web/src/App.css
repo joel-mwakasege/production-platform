@@ -118,9 +118,11 @@ textarea { min-height:96px; resize:vertical; }
 .category-production { background:#d7f15a44; color:var(--ink); border:1px solid #d7f15a; }
 .category-other { background:#bec8bd33; color:var(--muted); border:1px solid #bec8bd; }
 .location-badge { background:#20252210; color:var(--ink); border:1px solid var(--line); }
-.role-dept { margin:4px 0 0; font-size:12px; color:var(--muted); }
-.delete-icon-btn { border:0; background:transparent; color:#bbb; font-size:14px; cursor:pointer; padding:4px; }
-.delete-icon-btn:hover { color:var(--orange); }
+.card-actions { display:flex; align-items:center; gap:4px; }
+.edit-icon-btn { border:0; background:transparent; color:#777; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:4px; font:11px 'DM Mono',monospace; }
+.edit-icon-btn:hover { background:var(--paper); color:var(--ink); }
+.delete-icon-btn { border:0; background:transparent; color:#bbb; font-size:13px; cursor:pointer; padding:4px 6px; border-radius:4px; }
+.delete-icon-btn:hover { background:#ffebeb; color:var(--orange); }
 .contact-contact-info { display:flex; flex-direction:column; gap:6px; font-size:12px; padding-top:10px; border-top:1px solid var(--line); }
 .info-link { color:var(--ink); text-decoration:none; font:11px 'DM Mono',monospace; }
 .info-link:hover { color:var(--orange); text-decoration:underline; }

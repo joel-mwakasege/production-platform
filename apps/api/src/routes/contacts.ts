@@ -25,6 +25,8 @@ const contactSchema = z.object({
   category: ContactCategoryEnum.default('CREW'),
 });
 
+const updateContactSchema = contactSchema.partial();
+
 const locationSchema = z.object({
   name: z.string().trim().min(1).max(120),
   address: z.string().trim().max(300).optional().nullable(),
@@ -34,6 +36,8 @@ const locationSchema = z.object({
   nearestHospital: z.string().trim().max(500).optional().nullable(),
   notes: z.string().trim().max(1000).optional().nullable(),
 });
+
+const updateLocationSchema = locationSchema.partial();
 
 export const listContactsHandler: RequestHandler = async (req, res): Promise<void> => {
   try {
@@ -88,6 +92,53 @@ export const createContactHandler: RequestHandler = async (req, res): Promise<vo
   } catch (err: any) {
     console.error('Error in createContactHandler:', err);
     res.status(500).json({ error: err.message || 'Failed to create contact' });
+  }
+};
+
+export const updateContactHandler: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const context = await authorizeProjectRequest(req);
+    const contactId = typeof req.params.contactId === 'string' ? req.params.contactId : null;
+    if (!context || !contactId) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
+
+    const parsed = updateContactSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid contact payload', details: parsed.error.format() });
+      return;
+    }
+
+    const existing = await database.contact.findFirst({
+      where: { id: contactId, projectId: context.projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Contact not found' });
+      return;
+    }
+
+    const contact = await database.contact.update({
+      where: { id: contactId },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+        ...(parsed.data.role !== undefined ? { role: parsed.data.role || null } : {}),
+        ...(parsed.data.department !== undefined ? { department: parsed.data.department || null } : {}),
+        ...(parsed.data.company !== undefined ? { company: parsed.data.company || null } : {}),
+        ...(parsed.data.email !== undefined ? { email: parsed.data.email || null } : {}),
+        ...(parsed.data.phone !== undefined ? { phone: parsed.data.phone || null } : {}),
+        ...(parsed.data.address !== undefined ? { address: parsed.data.address || null } : {}),
+        ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes || null } : {}),
+        ...(parsed.data.category !== undefined ? { category: parsed.data.category } : {}),
+      },
+    });
+
+    res.json({ contact });
+  } catch (err: any) {
+    console.error('Error in updateContactHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to update contact' });
   }
 };
 
@@ -172,6 +223,51 @@ export const createLocationHandler: RequestHandler = async (req, res): Promise<v
   } catch (err: any) {
     console.error('Error in createLocationHandler:', err);
     res.status(500).json({ error: err.message || 'Failed to create location' });
+  }
+};
+
+export const updateLocationHandler: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const context = await authorizeProjectRequest(req);
+    const locationId = typeof req.params.locationId === 'string' ? req.params.locationId : null;
+    if (!context || !locationId) {
+      res.status(403).json({ error: 'Project membership required' });
+      return;
+    }
+
+    const parsed = updateLocationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid location payload', details: parsed.error.format() });
+      return;
+    }
+
+    const existing = await database.location.findFirst({
+      where: { id: locationId, projectId: context.projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Location not found' });
+      return;
+    }
+
+    const location = await database.location.update({
+      where: { id: locationId },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+        ...(parsed.data.address !== undefined ? { address: parsed.data.address || null } : {}),
+        ...(parsed.data.description !== undefined ? { description: parsed.data.description || null } : {}),
+        ...(parsed.data.parking !== undefined ? { parking: parsed.data.parking || null } : {}),
+        ...(parsed.data.basecamp !== undefined ? { basecamp: parsed.data.basecamp || null } : {}),
+        ...(parsed.data.nearestHospital !== undefined ? { nearestHospital: parsed.data.nearestHospital || null } : {}),
+        ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes || null } : {}),
+      },
+    });
+
+    res.json({ location });
+  } catch (err: any) {
+    console.error('Error in updateLocationHandler:', err);
+    res.status(500).json({ error: err.message || 'Failed to update location' });
   }
 };
 

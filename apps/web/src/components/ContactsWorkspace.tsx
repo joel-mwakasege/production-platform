@@ -56,12 +56,14 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
 
   // Contact Modal State
   const [showContactModal, setShowContactModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [contactName, setContactName] = useState('');
   const [contactRole, setContactRole] = useState('');
   const [contactDepartment, setContactDepartment] = useState('');
   const [contactCompany, setContactCompany] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [contactAddress, setContactAddress] = useState('');
   const [contactNotes, setContactNotes] = useState('');
   const [contactCategory, setContactCategory] = useState<ContactCategory>('CREW');
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
@@ -69,6 +71,7 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
 
   // Location Modal State
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [locationName, setLocationName] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
   const [locationDescription, setLocationDescription] = useState('');
@@ -102,7 +105,38 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
     };
   }, [organization.id, project.id, session.access_token]);
 
-  async function handleCreateContact(e: React.FormEvent<HTMLFormElement>) {
+  // Open Create / Edit Contact Modal
+  function openCreateContactModal() {
+    setEditingContact(null);
+    setContactName('');
+    setContactRole('');
+    setContactDepartment('');
+    setContactCompany('');
+    setContactEmail('');
+    setContactPhone('');
+    setContactAddress('');
+    setContactNotes('');
+    setContactCategory(activeTab === 'CAST' ? 'CAST' : activeTab === 'CREW' ? 'CREW' : 'CREW');
+    setContactError('');
+    setShowContactModal(true);
+  }
+
+  function openEditContactModal(contact: Contact) {
+    setEditingContact(contact);
+    setContactName(contact.name);
+    setContactRole(contact.role ?? '');
+    setContactDepartment(contact.department ?? '');
+    setContactCompany(contact.company ?? '');
+    setContactEmail(contact.email ?? '');
+    setContactPhone(contact.phone ?? '');
+    setContactAddress(contact.address ?? '');
+    setContactNotes(contact.notes ?? '');
+    setContactCategory(contact.category);
+    setContactError('');
+    setShowContactModal(true);
+  }
+
+  async function handleSaveContact(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!contactName.trim()) return;
 
@@ -110,38 +144,43 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
     setContactError('');
 
     try {
-      const response = await fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/contacts`, {
-        method: 'POST',
+      const isEditing = Boolean(editingContact);
+      const url = isEditing
+        ? `${API_URL}/api/organizations/${organization.id}/projects/${project.id}/contacts/${editingContact!.id}`
+        : `${API_URL}/api/organizations/${organization.id}/projects/${project.id}/contacts`;
+      const method = isEditing ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: contactName,
-          role: contactRole || undefined,
-          department: contactDepartment || undefined,
-          company: contactCompany || undefined,
-          email: contactEmail || undefined,
-          phone: contactPhone || undefined,
-          notes: contactNotes || undefined,
+          name: contactName.trim(),
+          role: contactRole.trim() || null,
+          department: contactDepartment.trim() || null,
+          company: contactCompany.trim() || null,
+          email: contactEmail.trim() || null,
+          phone: contactPhone.trim() || null,
+          address: contactAddress.trim() || null,
+          notes: contactNotes.trim() || null,
           category: contactCategory,
         }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? 'Could not create contact.');
+      if (!response.ok) throw new Error(result.error ?? 'Could not save contact.');
 
-      setContacts((prev) => [...prev, result.contact]);
+      if (isEditing) {
+        setContacts((prev) => prev.map((c) => (c.id === editingContact!.id ? result.contact : c)));
+      } else {
+        setContacts((prev) => [result.contact, ...prev]);
+      }
+
       setShowContactModal(false);
-      setContactName('');
-      setContactRole('');
-      setContactDepartment('');
-      setContactCompany('');
-      setContactEmail('');
-      setContactPhone('');
-      setContactNotes('');
-      setContactCategory('CREW');
+      setEditingContact(null);
     } catch (err) {
-      setContactError(err instanceof Error ? err.message : 'Failed to create contact.');
+      setContactError(err instanceof Error ? err.message : 'Failed to save contact.');
     } finally {
       setIsSubmittingContact(false);
     }
@@ -159,7 +198,34 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
     }
   }
 
-  async function handleCreateLocation(e: React.FormEvent<HTMLFormElement>) {
+  // Open Create / Edit Location Modal
+  function openCreateLocationModal() {
+    setEditingLocation(null);
+    setLocationName('');
+    setLocationAddress('');
+    setLocationDescription('');
+    setLocationParking('');
+    setLocationBasecamp('');
+    setLocationHospital('');
+    setLocationNotes('');
+    setLocationError('');
+    setShowLocationModal(true);
+  }
+
+  function openEditLocationModal(location: Location) {
+    setEditingLocation(location);
+    setLocationName(location.name);
+    setLocationAddress(location.address ?? '');
+    setLocationDescription(location.description ?? '');
+    setLocationParking(location.parking ?? '');
+    setLocationBasecamp(location.basecamp ?? '');
+    setLocationHospital(location.nearestHospital ?? '');
+    setLocationNotes(location.notes ?? '');
+    setLocationError('');
+    setShowLocationModal(true);
+  }
+
+  async function handleSaveLocation(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!locationName.trim()) return;
 
@@ -167,36 +233,41 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
     setLocationError('');
 
     try {
-      const response = await fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/locations`, {
-        method: 'POST',
+      const isEditing = Boolean(editingLocation);
+      const url = isEditing
+        ? `${API_URL}/api/organizations/${organization.id}/projects/${project.id}/locations/${editingLocation!.id}`
+        : `${API_URL}/api/organizations/${organization.id}/projects/${project.id}/locations`;
+      const method = isEditing ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: locationName,
-          address: locationAddress || undefined,
-          description: locationDescription || undefined,
-          parking: locationParking || undefined,
-          basecamp: locationBasecamp || undefined,
-          nearestHospital: locationHospital || undefined,
-          notes: locationNotes || undefined,
+          name: locationName.trim(),
+          address: locationAddress.trim() || null,
+          description: locationDescription.trim() || null,
+          parking: locationParking.trim() || null,
+          basecamp: locationBasecamp.trim() || null,
+          nearestHospital: locationHospital.trim() || null,
+          notes: locationNotes.trim() || null,
         }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? 'Could not create location.');
+      if (!response.ok) throw new Error(result.error ?? 'Could not save location.');
 
-      setLocations((prev) => [...prev, result.location]);
+      if (isEditing) {
+        setLocations((prev) => prev.map((l) => (l.id === editingLocation!.id ? result.location : l)));
+      } else {
+        setLocations((prev) => [result.location, ...prev]);
+      }
+
       setShowLocationModal(false);
-      setLocationName('');
-      setLocationAddress('');
-      setLocationDescription('');
-      setLocationParking('');
-      setLocationBasecamp('');
-      setLocationHospital('');
-      setLocationNotes('');
+      setEditingLocation(null);
     } catch (err) {
-      setLocationError(err instanceof Error ? err.message : 'Failed to create location.');
+      setLocationError(err instanceof Error ? err.message : 'Failed to save location.');
     } finally {
       setIsSubmittingLocation(false);
     }
@@ -280,10 +351,10 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
             />
           </div>
           <div className="actions-box">
-            <button className="secondary" type="button" onClick={() => setShowLocationModal(true)}>
+            <button className="secondary" type="button" onClick={openCreateLocationModal}>
               + Location
             </button>
-            <button className="primary" type="button" onClick={() => setShowContactModal(true)}>
+            <button className="primary" type="button" onClick={openCreateContactModal}>
               + Contact
             </button>
           </div>
@@ -329,14 +400,24 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                         <span className="badge location-badge">Location</span>
                         <h3>{loc.name}</h3>
                       </div>
-                      <button
-                        className="delete-icon-btn"
-                        type="button"
-                        onClick={() => void handleDeleteLocation(loc.id)}
-                        title="Delete Location"
-                      >
-                        ✕
-                      </button>
+                      <div className="card-actions">
+                        <button
+                          className="edit-icon-btn"
+                          type="button"
+                          onClick={() => openEditLocationModal(loc)}
+                          title="Edit Location"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="delete-icon-btn"
+                          type="button"
+                          onClick={() => void handleDeleteLocation(loc.id)}
+                          title="Delete Location"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                     {loc.address && <p className="card-address">📍 {loc.address}</p>}
                     {loc.description && <p className="card-desc">{loc.description}</p>}
@@ -410,14 +491,24 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                             {c.company && <span> ({c.company})</span>}
                           </p>
                         </div>
-                        <button
-                          className="delete-icon-btn"
-                          type="button"
-                          onClick={() => void handleDeleteContact(c.id)}
-                          title="Delete Contact"
-                        >
-                          ✕
-                        </button>
+                        <div className="card-actions">
+                          <button
+                            className="edit-icon-btn"
+                            type="button"
+                            onClick={() => openEditContactModal(c)}
+                            title="Edit Contact"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="delete-icon-btn"
+                            type="button"
+                            onClick={() => void handleDeleteContact(c.id)}
+                            title="Delete Contact"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
 
                       <div className="contact-contact-info">
@@ -430,6 +521,11 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                           <a href={`tel:${c.phone}`} className="info-link">
                             ☎ {c.phone}
                           </a>
+                        )}
+                        {c.address && (
+                          <p className="card-address" style={{ marginTop: '2px' }}>
+                            📍 {c.address}
+                          </p>
                         )}
                         {c.notes && <p className="contact-notes">{c.notes}</p>}
                       </div>
@@ -447,14 +543,18 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
         )}
       </div>
 
-      {/* New Contact Modal */}
+      {/* Contact Modal (Create / Edit) */}
       {showContactModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Add Contact</h2>
-            <p className="modal-subtitle">Add a cast member, crew member, vendor, or client to this project.</p>
+            <h2>{editingContact ? 'Edit Contact' : 'Add Contact'}</h2>
+            <p className="modal-subtitle">
+              {editingContact
+                ? `Update details for ${editingContact.name}`
+                : 'Add a cast member, crew member, vendor, or client to this project.'}
+            </p>
 
-            <form onSubmit={handleCreateContact}>
+            <form onSubmit={handleSaveContact}>
               <div className="form-group">
                 <label>Full Name *</label>
                 <input
@@ -482,24 +582,24 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                 </div>
 
                 <div className="form-group">
-                  <label>Department</label>
+                  <label>Role / Character</label>
                   <input
                     maxLength={120}
-                    value={contactDepartment}
-                    onChange={(e) => setContactDepartment(e.target.value)}
-                    placeholder="e.g. Camera / Directing"
+                    value={contactRole}
+                    onChange={(e) => setContactRole(e.target.value)}
+                    placeholder="e.g. Director of Photography"
                   />
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Role / Character Title</label>
+                  <label>Department</label>
                   <input
                     maxLength={120}
-                    value={contactRole}
-                    onChange={(e) => setContactRole(e.target.value)}
-                    placeholder="e.g. Lead Actress / DP"
+                    value={contactDepartment}
+                    onChange={(e) => setContactDepartment(e.target.value)}
+                    placeholder="e.g. Camera / Lighting"
                   />
                 </div>
 
@@ -516,7 +616,7 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Email Address</label>
+                  <label>Email</label>
                   <input
                     type="email"
                     maxLength={160}
@@ -539,17 +639,27 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
               </div>
 
               <div className="form-group">
-                <label>Notes / Dietary / Emergency</label>
-                <textarea
-                  maxLength={1000}
-                  value={contactNotes}
-                  onChange={(e) => setContactNotes(e.target.value)}
-                  placeholder="Any dietary restrictions, special call instructions, or private notes..."
-                  style={{ minHeight: '60px' }}
+                <label>Address / Agency Office</label>
+                <input
+                  maxLength={300}
+                  value={contactAddress}
+                  onChange={(e) => setContactAddress(e.target.value)}
+                  placeholder="e.g. 1200 Sunset Blvd, Los Angeles, CA"
                 />
               </div>
 
-              {contactError && <p className="message">{contactError}</p>}
+              <div className="form-group">
+                <label>Notes / Dietary / Emergency Contact</label>
+                <textarea
+                  rows={3}
+                  maxLength={1000}
+                  value={contactNotes}
+                  onChange={(e) => setContactNotes(e.target.value)}
+                  placeholder="e.g. Allergic to peanuts, primary contact for camera gear."
+                />
+              </div>
+
+              {contactError && <p style={{ color: 'var(--orange)', fontSize: '13px', margin: '8px 0' }}>{contactError}</p>}
 
               <div className="modal-actions">
                 <button
@@ -557,13 +667,13 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                   className="secondary"
                   onClick={() => {
                     setShowContactModal(false);
-                    setContactError('');
+                    setEditingContact(null);
                   }}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="primary" disabled={isSubmittingContact}>
-                  {isSubmittingContact ? 'Saving...' : 'Add Contact'}
+                  {isSubmittingContact ? 'Saving...' : editingContact ? 'Save Changes' : 'Create Contact'}
                 </button>
               </div>
             </form>
@@ -571,14 +681,18 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
         </div>
       )}
 
-      {/* New Location Modal */}
+      {/* Location Modal (Create / Edit) */}
       {showLocationModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Add Location</h2>
-            <p className="modal-subtitle">Add a shooting location, studio stage, or basecamp to the project.</p>
+            <h2>{editingLocation ? 'Edit Location' : 'Add Location'}</h2>
+            <p className="modal-subtitle">
+              {editingLocation
+                ? `Update details for ${editingLocation.name}`
+                : 'Add a shooting stage, exterior location, or facility.'}
+            </p>
 
-            <form onSubmit={handleCreateLocation}>
+            <form onSubmit={handleSaveLocation}>
               <div className="form-group">
                 <label>Location Name *</label>
                 <input
@@ -586,64 +700,74 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                   maxLength={120}
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  placeholder="e.g. Downtown Warehouse - Stage B"
+                  placeholder="e.g. Silverlake Diner (Stage A)"
                 />
               </div>
 
               <div className="form-group">
-                <label>Physical Address</label>
+                <label>Address</label>
                 <input
                   maxLength={300}
                   value={locationAddress}
                   onChange={(e) => setLocationAddress(e.target.value)}
-                  placeholder="e.g. 1420 Industrial Way, Austin, TX 78701"
+                  placeholder="e.g. 2400 Hyperion Ave, Los Angeles, CA 90027"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Description / Look</label>
+                <input
+                  maxLength={1000}
+                  value={locationDescription}
+                  onChange={(e) => setLocationDescription(e.target.value)}
+                  placeholder="e.g. Retro 1950s diner with neon lighting."
                 />
               </div>
 
               <div className="form-row">
-                <div className="form-group">
-                  <label>Nearest Hospital / ER</label>
-                  <input
-                    maxLength={500}
-                    value={locationHospital}
-                    onChange={(e) => setLocationHospital(e.target.value)}
-                    placeholder="e.g. Austin Regional ER, 1200 6th St"
-                  />
-                </div>
-
                 <div className="form-group">
                   <label>Parking Instructions</label>
                   <input
                     maxLength={500}
                     value={locationParking}
                     onChange={(e) => setLocationParking(e.target.value)}
-                    placeholder="e.g. Crew parking in Lot 3 via North Gate"
+                    placeholder="e.g. Crew lot in rear, permit required."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Basecamp / Trucks</label>
+                  <input
+                    maxLength={500}
+                    value={locationBasecamp}
+                    onChange={(e) => setLocationBasecamp(e.target.value)}
+                    placeholder="e.g. Staging in adjacent church lot."
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Basecamp & Staging</label>
+                <label>Nearest Emergency Hospital (Hospital & ER)</label>
                 <input
                   maxLength={500}
-                  value={locationBasecamp}
-                  onChange={(e) => setLocationBasecamp(e.target.value)}
-                  placeholder="e.g. Trailers in North Lot, Catering in Courtyard"
+                  value={locationHospital}
+                  onChange={(e) => setLocationHospital(e.target.value)}
+                  placeholder="e.g. Cedars-Sinai Medical Center - 8700 Beverly Blvd"
                 />
               </div>
 
               <div className="form-group">
-                <label>Location Notes & Access</label>
+                <label>Permit & Access Notes</label>
                 <textarea
+                  rows={3}
                   maxLength={1000}
                   value={locationNotes}
                   onChange={(e) => setLocationNotes(e.target.value)}
-                  placeholder="Gate code, quiet hours, sound permit restrictions..."
-                  style={{ minHeight: '60px' }}
+                  placeholder="e.g. Film permit #LA-8921, sound curfew at 10 PM."
                 />
               </div>
 
-              {locationError && <p className="message">{locationError}</p>}
+              {locationError && <p style={{ color: 'var(--orange)', fontSize: '13px', margin: '8px 0' }}>{locationError}</p>}
 
               <div className="modal-actions">
                 <button
@@ -651,13 +775,13 @@ export function ContactsWorkspace({ organization, project, session, onBack, onPh
                   className="secondary"
                   onClick={() => {
                     setShowLocationModal(false);
-                    setLocationError('');
+                    setEditingLocation(null);
                   }}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="primary" disabled={isSubmittingLocation}>
-                  {isSubmittingLocation ? 'Saving...' : 'Add Location'}
+                  {isSubmittingLocation ? 'Saving...' : editingLocation ? 'Save Changes' : 'Create Location'}
                 </button>
               </div>
             </form>

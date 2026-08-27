@@ -13,6 +13,8 @@ import {
   deleteLocationHandler,
   listContactsHandler,
   listLocationsHandler,
+  updateContactHandler,
+  updateLocationHandler,
 } from './routes/contacts.js';
 
 const app = express();
@@ -46,9 +48,11 @@ app.post('/api/organizations/:organizationId/projects/:projectId/schedule/days',
 app.post('/api/organizations/:organizationId/projects/:projectId/schedule/days/:shootDayId/scenes', requireAuth, assignSceneHandler);
 app.get('/api/organizations/:organizationId/projects/:projectId/contacts', requireAuth, listContactsHandler);
 app.post('/api/organizations/:organizationId/projects/:projectId/contacts', requireAuth, createContactHandler);
+app.patch('/api/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, updateContactHandler);
 app.delete('/api/organizations/:organizationId/projects/:projectId/contacts/:contactId', requireAuth, deleteContactHandler);
 app.get('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, listLocationsHandler);
 app.post('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, createLocationHandler);
+app.patch('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, updateLocationHandler);
 app.delete('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, deleteLocationHandler);
 
 // 404 handler
