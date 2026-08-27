@@ -1,17 +1,21 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/client"
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DIRECT_URL")
+  schemas  = ["public", "auth"]
 }
 
 enum OrganizationRole {
   OWNER
   ADMIN
   MEMBER
+
+  @@schema("public")
 }
 
 enum ProjectRole {
@@ -19,6 +23,8 @@ enum ProjectRole {
   ADMIN
   MEMBER
   VIEWER
+
+  @@schema("public")
 }
 
 enum ProjectType {
@@ -31,6 +37,8 @@ enum ProjectType {
   EVENT
   PHOTOSHOOT
   OTHER
+
+  @@schema("public")
 }
 
 enum ProjectStatus {
@@ -38,6 +46,8 @@ enum ProjectStatus {
   ACTIVE
   COMPLETED
   ARCHIVED
+
+  @@schema("public")
 }
 
 // --- NEW: Screenplay Element Types ---
@@ -49,6 +59,21 @@ enum ScreenplayElementType {
   PARENTHETICAL
   TRANSITION
   SHOT
+
+  @@schema("public")
+}
+
+enum ProductionElementCategory {
+  CAST
+  CREW
+  LOCATION
+  PROP
+  COSTUME
+  VEHICLE
+  SET_DRESSING
+  OTHER
+
+  @@schema("public")
 }
 
 model Profile {
@@ -63,6 +88,7 @@ model Profile {
   projects    ProjectMember[]
 
   @@map("profiles")
+  @@schema("public")
 }
 
 model Organization {
@@ -76,6 +102,7 @@ model Organization {
   projects Project[]
 
   @@map("organizations")
+  @@schema("public")
 }
 
 model OrganizationMember {
@@ -92,6 +119,7 @@ model OrganizationMember {
   @@unique([organizationId, profileId])
   @@index([profileId])
   @@map("organization_members")
+  @@schema("public")
 }
 
 model Project {
@@ -118,6 +146,7 @@ model Project {
   @@unique([organizationId, slug])
   @@index([organizationId])
   @@map("projects")
+  @@schema("public")
 }
 
 model ProjectMember {
@@ -134,6 +163,7 @@ model ProjectMember {
   @@unique([projectId, profileId])
   @@index([profileId])
   @@map("project_members")
+  @@schema("public")
 }
 
 model Task {
@@ -149,6 +179,7 @@ model Task {
 
   @@index([projectId])
   @@map("tasks")
+  @@schema("public")
 }
 
 model Screenplay {
@@ -162,6 +193,7 @@ model Screenplay {
   scenes  Scene[]
 
   @@map("screenplays")
+  @@schema("public")
 }
 
 model Scene {
@@ -181,6 +213,7 @@ model Scene {
   @@unique([screenplayId, sceneNumber])
   @@index([screenplayId])
   @@map("scenes")
+  @@schema("public")
 }
 
 // --- NEW: Structured Screenplay Elements ---
@@ -198,17 +231,7 @@ model ScreenplayElement {
 
   @@index([sceneId])
   @@map("screenplay_elements")
-}
-
-enum ProductionElementCategory {
-  CAST
-  CREW
-  LOCATION
-  PROP
-  COSTUME
-  VEHICLE
-  SET_DRESSING
-  OTHER
+  @@schema("public")
 }
 
 model ProductionElement {
@@ -225,6 +248,7 @@ model ProductionElement {
   @@unique([projectId, name, category])
   @@index([projectId])
   @@map("production_elements")
+  @@schema("public")
 }
 
 model SceneElement {
@@ -238,6 +262,7 @@ model SceneElement {
   @@id([sceneId, elementId])
   @@index([elementId])
   @@map("scene_elements")
+  @@schema("public")
 }
 
 model ShootDay {
@@ -255,6 +280,7 @@ model ShootDay {
   @@unique([projectId, dayNumber])
   @@index([projectId])
   @@map("shoot_days")
+  @@schema("public")
 }
 
 model SceneSchedule {
@@ -269,4 +295,5 @@ model SceneSchedule {
   @@id([sceneId, shootDayId])
   @@index([shootDayId])
   @@map("scene_schedule")
+  @@schema("public")
 }
