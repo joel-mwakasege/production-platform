@@ -2,14 +2,13 @@
   "name": "@production-platform/database",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc src/index.ts --outDir dist --declaration --target ES2022 --module NodeNext --moduleResolution NodeNext",
+    "build": "tsc src/index.ts --outDir dist --declaration --target ES2022 --module CommonJS --moduleResolution node",
     "db:generate": "prisma generate",
     "db:format": "prisma format",
     "db:validate": "prisma validate",
