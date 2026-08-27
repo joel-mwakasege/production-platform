@@ -37,7 +37,7 @@ function getStyleForType(type: ScreenplayElementType): React.CSSProperties {
     minHeight: '24px',
     background: 'transparent',
     border: '1px solid transparent',
-    color: '#e0e0e0',
+    color: '#ffffff',
     fontFamily: '"Courier Prime", "Courier New", Courier, monospace',
     fontSize: '16px',
     lineHeight: '1.4',
@@ -276,7 +276,6 @@ export function ScriptWorkspace({
             {selectedScene.scriptElements.map((el) => (
               <div key={el.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', position: 'relative' }}>
                 
-                
                 {/* Invisible dropdown to change type on the fly */}
                 <select 
                   value={el.type}
@@ -284,7 +283,7 @@ export function ScriptWorkspace({
                     updateElement(el.id, el.content, e.target.value as ScreenplayElementType);
                     void saveScreenplay();
                   }}
-                  style={{ width: '120px', padding: '4px', fontSize: '11px', background: '#222', color: '#888', border: '1px solid #333', borderRadius: '4px', marginTop: '4px' }}
+                  style={{ width: '120px', padding: '4px', fontSize: '11px', background: '#222', color: '#ffffff', border: '1px solid #555', borderRadius: '4px', marginTop: '4px' }}
                 >
                   <option value="ACTION">Action</option>
                   <option value="CHARACTER">Character</option>
