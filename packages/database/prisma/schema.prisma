@@ -40,6 +40,17 @@ enum ProjectStatus {
   ARCHIVED
 }
 
+// --- NEW: Screenplay Element Types ---
+enum ScreenplayElementType {
+  SCENE_HEADING
+  ACTION
+  CHARACTER
+  DIALOGUE
+  PARENTHETICAL
+  TRANSITION
+  SHOT
+}
+
 model Profile {
   id          String   @id @db.Uuid
   displayName String?
@@ -84,7 +95,7 @@ model OrganizationMember {
 }
 
 model Project {
-  id             String   @id @default(uuid())
+  id             String        @id @default(uuid())
   organizationId String
   name           String
   slug           String
@@ -94,10 +105,10 @@ model Project {
   status         ProjectStatus @default(PLANNING)
   startDate      DateTime?
   endDate        DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   members      ProjectMember[]
   tasks        Task[]
   screenplay   Screenplay?
@@ -126,13 +137,13 @@ model ProjectMember {
 }
 
 model Task {
-  id          String   @id @default(uuid())
-  projectId   String
-  title       String
-  completed   Boolean  @default(false)
-  dueDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(uuid())
+  projectId String
+  title     String
+  completed Boolean   @default(false)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -154,21 +165,39 @@ model Screenplay {
 }
 
 model Scene {
-  id          String   @id @default(uuid())
+  id           String   @id @default(uuid())
   screenplayId String
-  sceneNumber Int
-  heading     String
-  body        String   @default("")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sceneNumber  Int
+  heading      String
+  body         String   @default("") // We will eventually deprecate this field once the new blocks are fully wired up
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  screenplay Screenplay @relation(fields: [screenplayId], references: [id], onDelete: Cascade)
-  elements  SceneElement[]
-  schedule  SceneSchedule[]
+  screenplay     Screenplay          @relation(fields: [screenplayId], references: [id], onDelete: Cascade)
+  elements       SceneElement[]      // Existing breakdown tags
+  scriptElements ScreenplayElement[] // NEW: Structured script blocks
+  schedule       SceneSchedule[]
 
   @@unique([screenplayId, sceneNumber])
   @@index([screenplayId])
   @@map("scenes")
+}
+
+// --- NEW: Structured Screenplay Elements ---
+model ScreenplayElement {
+  id        String                @id @default(uuid())
+  type      ScreenplayElementType
+  content   String                @db.Text
+  position  Int                   // To keep the script in the exact right order
+  
+  sceneId   String
+  scene     Scene                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([sceneId])
+  @@map("screenplay_elements")
 }
 
 enum ProductionElementCategory {
@@ -183,14 +212,14 @@ enum ProductionElementCategory {
 }
 
 model ProductionElement {
-  id           String                     @id @default(uuid())
-  projectId    String
-  name         String
-  category     ProductionElementCategory
-  createdAt    DateTime                   @default(now())
-  updatedAt    DateTime                   @updatedAt
+  id        String                    @id @default(uuid())
+  projectId String
+  name      String
+  category  ProductionElementCategory
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
 
-  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   scenes  SceneElement[]
 
   @@unique([projectId, name, category])
@@ -199,9 +228,9 @@ model ProductionElement {
 }
 
 model SceneElement {
-  sceneId    String
-  elementId  String
-  createdAt  DateTime @default(now())
+  sceneId   String
+  elementId String
+  createdAt DateTime @default(now())
 
   scene   Scene             @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   element ProductionElement @relation(fields: [elementId], references: [id], onDelete: Cascade)
@@ -220,7 +249,7 @@ model ShootDay {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   scenes  SceneSchedule[]
 
   @@unique([projectId, dayNumber])
@@ -229,12 +258,12 @@ model ShootDay {
 }
 
 model SceneSchedule {
-  sceneId   String
+  sceneId    String
   shootDayId String
-  position  Int      @default(0)
-  createdAt DateTime @default(now())
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
 
-  scene   Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  scene    Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
 
   @@id([sceneId, shootDayId])
