@@ -1,8 +1,8 @@
 import type { RequestHandler, Response } from 'express';
 import { z } from 'zod';
 import { database } from '@production-platform/database';
-import { slugify } from '../lib/auth.js';
-import type { AuthenticatedRequest } from '../middleware/auth.js';
+import { slugify } from '../lib/auth';
+import type { AuthenticatedRequest } from '../middleware/auth';
 
 const createOrganizationSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -20,7 +20,7 @@ const demoElements = [
   { name: 'Maya', category: 'CAST' as const, scenes: [1, 2, 3, 4, 5] },
   { name: 'Elias', category: 'CAST' as const, scenes: [4, 5] },
   { name: 'Bus stop', category: 'LOCATION' as const, scenes: [1] },
-  { name: "Maya's apartment", category: 'LOCATION' as const, scenes: [2] },
+  { name: 'Maya\'s apartment', category: 'LOCATION' as const, scenes: [2] },
   { name: 'Market street', category: 'LOCATION' as const, scenes: [3] },
   { name: 'Riverbank', category: 'LOCATION' as const, scenes: [4] },
   { name: 'Red scarf', category: 'COSTUME' as const, scenes: [1, 5] },

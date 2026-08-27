@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import { database } from '@production-platform/database';
-import { authorizeProjectRequest } from './projects.js';
+import { authorizeProjectRequest } from './projects';
 
 const castCallItemSchema = z.object({
   id: z.string().optional(),

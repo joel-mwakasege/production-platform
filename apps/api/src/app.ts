@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express, { Router } from 'express';
-import { requireAuth } from './middleware/auth.js';
-import { createOrganizationHandler, listOrganizationsHandler } from './routes/organizations.js';
+import { requireAuth } from './middleware/auth';
+import { createOrganizationHandler, listOrganizationsHandler } from './routes/organizations';
 import {
   createProjectHandler,
   createTaskHandler,
@@ -9,14 +9,14 @@ import {
   listProjectsHandler,
   listTasksHandler,
   updateTaskHandler,
-} from './routes/projects.js';
-import { getScreenplayHandler, saveScreenplayHandler } from './routes/screenplays.js';
+} from './routes/projects';
+import { getScreenplayHandler, saveScreenplayHandler } from './routes/screenplays';
 import {
   addBreakdownElementHandler,
   getBreakdownHandler,
   removeBreakdownElementHandler,
-} from './routes/breakdowns.js';
-import { assignSceneHandler, createShootDayHandler, getScheduleHandler } from './routes/schedules.js';
+} from './routes/breakdowns';
+import { assignSceneHandler, createShootDayHandler, getScheduleHandler } from './routes/schedules';
 import {
   createContactHandler,
   createLocationHandler,
@@ -26,12 +26,12 @@ import {
   listLocationsHandler,
   updateContactHandler,
   updateLocationHandler,
-} from './routes/contacts.js';
+} from './routes/contacts';
 import {
   getCallSheetByDayHandler,
   listCallSheetsHandler,
   saveCallSheetHandler,
-} from './routes/callsheets.js';
+} from './routes/callsheets';
 
 const app = express();
 

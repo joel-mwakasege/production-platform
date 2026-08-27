@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractBearerToken, slugify } from './auth.js';
+import { extractBearerToken, slugify } from './auth';
 
 test('extractBearerToken returns the token from an Authorization header', () => {
   assert.equal(extractBearerToken('Bearer abc123'), 'abc123');

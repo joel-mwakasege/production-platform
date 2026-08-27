@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import { database } from '@production-platform/database';
-import { authorizeProjectRequest } from './projects.js';
+import { authorizeProjectRequest } from './projects';
 
 // Define the exact types supported by our new database model
 const ScreenplayElementTypeEnum = z.enum([

@@ -1,8 +1,8 @@
 import type { Request, RequestHandler } from 'express';
 import { z } from 'zod';
 import { database } from '@production-platform/database';
-import { slugify } from '../lib/auth.js';
-import type { AuthenticatedRequest } from '../middleware/auth.js';
+import { slugify } from '../lib/auth';
+import type { AuthenticatedRequest } from '../middleware/auth';
 
 const projectSchema = z.object({
   name: z.string().trim().min(2).max(120),
