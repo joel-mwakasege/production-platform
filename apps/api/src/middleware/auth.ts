@@ -3,20 +3,24 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { extractBearerToken } from '../lib/auth';
 
-const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-const serviceRoleKey =
-  process.env.SUPABASE_SECRET_KEY ??
-  process.env.SUPABASE_SERVICE_ROLE_KEY ??
-  process.env.SUPABASE_ANON_KEY ??
-  process.env.VITE_SUPABASE_ANON_KEY ??
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+function getSupabaseClient() {
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey =
+    process.env.SUPABASE_SECRET_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.VITE_SUPABASE_ANON_KEY ??
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-const supabase = supabaseUrl && serviceRoleKey
-  ? createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-  : null;
-  
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
 export type AuthenticatedRequest = Request & {
   user?: {
     id: string;
@@ -37,8 +41,9 @@ export const requireAuth: RequestHandler = async (
     return;
   }
 
+  const supabase = getSupabaseClient();
   if (!supabase) {
-    res.status(503).json({ error: 'Authentication service is not configured' });
+    res.status(503).json({ error: 'Authentication service is not configured (missing Supabase URL or Secret Key)' });
     return;
   }
 

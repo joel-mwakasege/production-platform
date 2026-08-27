@@ -53,6 +53,11 @@ app.get('/health', (_req, res) => {
 
 const router = Router();
 
+// Health check
+router.get('/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'production-platform-api' });
+});
+
 // Organizations
 router.post('/organizations', requireAuth, createOrganizationHandler);
 router.get('/organizations', requireAuth, listOrganizationsHandler);
