@@ -96,15 +96,15 @@ export function ProductionWorkspace({ organization, project, session, onBack, on
     Promise.all([
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/schedule`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/contacts`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/locations`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
     ])
-      .then(([scheduleRes, contactsRes, locationsRes]) => {
+      .then(([scheduleRes, contactsRes, locationsRes]: [any, any, any]) => {
         if (cancelled) return;
         const days = scheduleRes.shootDays ?? [];
         setShootDays(days);
@@ -136,8 +136,8 @@ export function ProductionWorkspace({ organization, project, session, onBack, on
     fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/callsheets/days/${selectedDayId}`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
-      .then((r) => r.json())
-      .then((data) => {
+      .then((r) => (r.ok ? r.json().catch(() => ({})) : {}))
+      .then((data: any) => {
         if (cancelled) return;
         if (data.callSheet) {
           setCallSheet(data.callSheet);

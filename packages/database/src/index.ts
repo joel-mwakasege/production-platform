@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from '../generated/client/index.js';
+import { PrismaClient } from '@prisma/client';
 
 const datasourceUrl =
   process.env.DIRECT_URL ??
@@ -31,5 +31,5 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = database;
 }
 
-export * from '../generated/client/index.js';
+export * from '@prisma/client';
 export { PrismaClient };

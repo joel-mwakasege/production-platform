@@ -88,18 +88,18 @@ export function WorkspaceDashboard({
     Promise.all([
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/tasks`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/contacts`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/locations`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
       fetch(`${API_URL}/api/organizations/${organization.id}/projects/${project.id}/schedule`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then((r) => r.json()),
+      }).then((r) => (r.ok ? r.json().catch(() => ({})) : {})),
     ])
-      .then(([taskRes, contactRes, locRes, schedRes]) => {
+      .then(([taskRes, contactRes, locRes, schedRes]: [any, any, any, any]) => {
         if (cancelled) return;
         setTasks(taskRes.tasks ?? []);
         setContacts(contactRes.contacts ?? []);
