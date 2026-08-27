@@ -7,7 +7,35 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(typescript@6.0.3))(typescript@6.0.3)
+      '@supabase/supabase-js':
+        specifier: ^2.112.4
+        version: 2.112.4
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.6
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1
+      zod:
+        specifier: ^4.1.5
+        version: 4.4.3
     devDependencies:
+      '@types/cors':
+        specifier: ^2.8.19
+        version: 2.8.19
+      '@types/express':
+        specifier: ^5.0.3
+        version: 5.0.6
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
       prettier:
         specifier: ^3.6.2
         version: 3.9.6
@@ -1400,6 +1428,11 @@ snapshots:
       prisma: 6.19.3(typescript@5.9.3)
       typescript: 5.9.3
 
+  '@prisma/client@6.19.3(prisma@6.19.3(typescript@6.0.3))(typescript@6.0.3)':
+    optionalDependencies:
+      prisma: 6.19.3(typescript@6.0.3)
+      typescript: 6.0.3
+
   '@prisma/config@6.19.3':
     dependencies:
       c12: 3.1.0
@@ -2007,6 +2040,16 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - magicast
+
+  prisma@6.19.3(typescript@6.0.3):
+    dependencies:
+      '@prisma/config': 6.19.3
+      '@prisma/engines': 6.19.3
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - magicast
+    optional: true
 
   proxy-addr@2.0.7:
     dependencies:
