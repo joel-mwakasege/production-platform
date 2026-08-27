@@ -16,6 +16,11 @@ import {
   updateContactHandler,
   updateLocationHandler,
 } from './routes/contacts.js';
+import {
+  getCallSheetByDayHandler,
+  listCallSheetsHandler,
+  saveCallSheetHandler,
+} from './routes/callsheets.js';
 
 const app = express();
 
@@ -54,6 +59,10 @@ app.get('/api/organizations/:organizationId/projects/:projectId/locations', requ
 app.post('/api/organizations/:organizationId/projects/:projectId/locations', requireAuth, createLocationHandler);
 app.patch('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, updateLocationHandler);
 app.delete('/api/organizations/:organizationId/projects/:projectId/locations/:locationId', requireAuth, deleteLocationHandler);
+app.get('/api/organizations/:organizationId/projects/:projectId/callsheets', requireAuth, listCallSheetsHandler);
+app.get('/api/organizations/:organizationId/projects/:projectId/callsheets/days/:shootDayId', requireAuth, getCallSheetByDayHandler);
+app.post('/api/organizations/:organizationId/projects/:projectId/callsheets', requireAuth, saveCallSheetHandler);
+app.patch('/api/organizations/:organizationId/projects/:projectId/callsheets/:shootDayId', requireAuth, saveCallSheetHandler);
 
 // 404 handler
 app.use((_req, res) => {

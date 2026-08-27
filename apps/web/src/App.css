@@ -155,4 +155,48 @@ textarea { min-height:96px; resize:vertical; }
 .stat-pill b { font-size:16px; color:var(--lime); }
 .stat-pill small { font:10px 'DM Mono',monospace; color:#a9b2aa; }
 
+/* Call Sheet Styles */
+.callsheet-container { max-width:1040px; margin:auto; padding:40px 32px; }
+.callsheet-toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+.callsheet-tabs { display:flex; gap:8px; overflow-x:auto; }
+.cs-sheet { background:var(--white); border:2px solid var(--ink); padding:36px; box-shadow:0 10px 30px rgba(0,0,0,0.06); }
+.cs-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:18px; margin-bottom:20px; gap:20px; }
+.cs-header-left h1 { margin:4px 0 6px; font-size:26px; letter-spacing:-0.03em; }
+.cs-header-left p { margin:0; color:var(--muted); font:12px 'DM Mono',monospace; }
+.cs-header-right { text-align:right; font:12px 'DM Mono',monospace; }
+.cs-header-right strong { display:block; font-size:18px; color:var(--orange); }
+.cs-times-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; background:var(--paper); padding:16px; border:1px solid var(--line); margin-bottom:24px; }
+.cs-time-box label { font:10px 'DM Mono',monospace; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:4px; }
+.cs-time-box input { width:100%; font:700 14px 'DM Mono',monospace; padding:8px; border:1px solid var(--line); background:var(--white); color:var(--ink); }
+.cs-weather-bar { background:#20252208; border:1px solid var(--line); padding:10px 14px; font:12px 'DM Mono',monospace; display:flex; align-items:center; gap:8px; margin-bottom:24px; }
+.cs-weather-bar input { flex:1; border:0; background:transparent; font:12px 'DM Mono',monospace; outline:none; }
+.cs-locations-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+.cs-location-card { padding:16px; background:var(--paper); border:1px solid var(--line); }
+.cs-location-card h4 { margin:0 0 6px; font-size:14px; font-weight:700; }
+.cs-location-card p { margin:0 0 6px; font-size:13px; color:var(--ink); }
+.cs-location-card small { display:block; font:11px 'DM Mono',monospace; color:var(--muted); }
+.cs-hospital-alert { background:#fff5f2; border:1px solid #fbd2c5; padding:12px 14px; margin-bottom:24px; display:flex; align-items:center; gap:12px; }
+.cs-hospital-alert input { flex:1; border:1px solid #fbd2c5; padding:6px 10px; background:var(--white); font:12px 'DM Mono',monospace; color:var(--orange); }
+.cs-section { margin-bottom:28px; }
+.cs-section-title { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--ink); padding-bottom:6px; margin-bottom:12px; }
+.cs-section-title h3 { margin:0; font:700 13px 'DM Mono',monospace; text-transform:uppercase; letter-spacing:0.05em; }
+.cs-table-wrap { overflow-x:auto; border:1px solid var(--line); }
+.cs-table { width:100%; border-collapse:collapse; font-size:13px; text-align:left; }
+.cs-table th { background:var(--paper); padding:10px 12px; font:700 11px 'DM Mono',monospace; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--line); border-right:1px solid var(--line); }
+.cs-table td { padding:8px 10px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); vertical-align:middle; }
+.cs-table input, .cs-table select { width:100%; padding:6px 8px; border:1px solid transparent; background:transparent; font-size:13px; color:var(--ink); }
+.cs-table input:focus, .cs-table select:focus { background:var(--white); border-color:var(--line); outline:none; }
+.cs-dept-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+.cs-dept-box { background:var(--paper); border:1px solid var(--line); padding:16px; }
+.cs-dept-box label { font:700 11px 'DM Mono',monospace; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:8px; }
+.cs-dept-box textarea { width:100%; border:1px solid var(--line); background:var(--white); padding:10px; font-size:13px; line-height:1.5; resize:vertical; min-height:80px; }
+
+@media print {
+  .sidebar, .topbar, .full-phase-rail, .callsheet-toolbar, .modal-actions, .text-button, .actions-box, button { display:none !important; }
+  .script-shell, .callsheet-container, .cs-sheet { padding:0 !important; margin:0 !important; border:0 !important; box-shadow:none !important; max-width:100% !important; background:#fff !important; color:#000 !important; }
+  .cs-times-grid, .cs-location-card, .cs-table th, .cs-dept-box { background:#f5f5f5 !important; }
+  body { background:#fff !important; }
+}
+
+
 

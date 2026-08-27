@@ -116,6 +116,7 @@ model Project {
   shootDays    ShootDay[]
   contacts     Contact[]
   locations    Location[]
+  callSheets   CallSheet[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -251,8 +252,9 @@ model ShootDay {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  scenes  SceneSchedule[]
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes    SceneSchedule[]
+  callSheet CallSheet?
 
   @@unique([projectId, dayNumber])
   @@index([projectId])
@@ -321,4 +323,54 @@ model Location {
 
   @@index([projectId])
   @@map("locations")
+}
+
+model CallSheet {
+  id              String   @id @default(uuid())
+  projectId       String
+  shootDayId      String   @unique
+  title           String?
+  generalCrewCall String?
+  breakfastTime   String?
+  firstShotTime   String?
+  lunchTime       String?
+  estimatedWrap   String?
+  weatherNotes    String?
+  locationName    String?
+  locationAddress String?
+  parkingNotes    String?
+  basecampNotes   String?
+  nearestHospital String?
+  generalNotes    String?
+  departmentNotes String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  shootDay  ShootDay   @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+  castCalls CastCall[]
+
+  @@index([projectId])
+  @@map("call_sheets")
+}
+
+model CastCall {
+  id            String   @id @default(uuid())
+  callSheetId   String
+  castNumber    String?
+  characterName String
+  actorName     String
+  status        String?
+  pickupTime    String?
+  hmuCall       String?
+  onSetCall     String?
+  notes         String?
+  position      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  callSheet CallSheet @relation(fields: [callSheetId], references: [id], onDelete: Cascade)
+
+  @@index([callSheetId])
+  @@map("cast_calls")
 }
