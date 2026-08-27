@@ -10,6 +10,8 @@
   "scripts": {
     "build": "tsc src/index.ts --outDir dist --declaration --target ES2022 --module CommonJS --moduleResolution node",
     "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
     "db:format": "prisma format",
     "db:validate": "prisma validate",
     "typecheck": "tsc --noEmit"
